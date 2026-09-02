@@ -821,6 +821,11 @@ function extractGraph(dataModel) {
 
       nodes.push({
         data:{id:fullId,label:tname,
+              erd_label:[tname.toUpperCase(),'--------------------------------',...attrList.map(a=>{
+                const marker=a.pk?'PK ':a.fk?'FK ':'   ';
+                return `${marker}${String(a.name).padEnd(28,' ')} ${a.type||'UNKNOWN'}`;
+              })].join('\n'),
+              erd_height:Math.max(90,56+attrList.length*16),
               parent:`domain_${dname}`,type:'table',
               domain:dname,subdomain,attribute_count:attrList.length,
               fk_count:fkCount,tag_count:tagArr.length,color,slot},
@@ -1174,6 +1179,23 @@ function getStylesheet(showDomains=true,sizeScale=1,t=null){
       fontSize:fs(11),fontWeight:'500',color:t.ink,textMarginY:nd(7),
       textBackgroundColor:t.card,textBackgroundOpacity:1,
       textBackgroundPadding:nd(2)+'px '+nd(5)+'px',textBackgroundShape:'roundrectangle',
+    }},
+    {selector:'.erd-node',style:{
+      shape:'round-rectangle',width:nd(310),height:'data(erd_height)',padding:nd(10),
+      backgroundColor:t.card,borderWidth:2,borderColor:'data(color)',
+      content:'data(erd_label)',textValign:'center',textHalign:'center',textJustify:'left',
+      textWrap:'wrap',textMaxWidth:nd(290),fontFamily:'monospace',fontSize:fs(10),fontWeight:'500',
+      color:t.ink,textBackgroundOpacity:0,
+    }},
+    {selector:'.erd-node:selected',style:{borderWidth:4,borderColor:t.gold}},
+    {selector:'.erd-center-node',style:{borderWidth:4,borderColor:t.gold}},
+    {selector:'.erd-focus-edge',style:{
+      width:3,lineColor:t.flow,targetArrowColor:t.flow,targetArrowShape:'tee',
+      sourceArrowColor:t.flow,sourceArrowShape:'vee',curveStyle:'taxi',taxiDirection:'auto',opacity:1,
+      label:'data(label)',fontSize:fs(10),fontWeight:'600',color:t.ink,
+      textBackgroundColor:t.card,textBackgroundOpacity:1,
+      textBackgroundPadding:nd(3)+'px '+nd(6)+'px',textBackgroundShape:'roundrectangle',
+      textRotation:'autorotate',
     }},
     {selector:'.domain-view-node',style:{
       shape:'ellipse',width:nd(42),height:nd(42),backgroundColor:'data(color)',
@@ -1875,8 +1897,16 @@ function ThemeControls({theme,onTheme,palette,onPalette}){
   );
 }
 
-function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate}){
+function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode,erdCoreOnly,onErdCoreOnly}){
   return h(React.Fragment,null,
+    h('button',{className:'tbtn '+(erdMode?'on':''),title:'Toggle between graph view and ERD view',
+      'aria-pressed':erdMode,onClick:()=>onErdMode(!erdMode)},'Toggle ERD View'),
+    erdMode&&h('label',{className:'tbtn',title:'Show the most connected entities and their relationships',
+        style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
+      h('input',{type:'checkbox',checked:erdCoreOnly,
+        onChange:e=>onErdCoreOnly(e.target.checked),
+        style:{cursor:'pointer',margin:0}}),
+      'Core entities'),
     h('label',{className:'tbtn',title:'Show domain grouping boxes',
         style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
       h('input',{type:'checkbox',checked:showDomains,
@@ -1896,7 +1926,7 @@ function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate}){
    then the searchable industry picker and every control. `actions` carries the
    graph buttons so this stays presentational and App keeps the cytoscape refs. */
 function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,onLoadJson,
-  showDomains,onShowDomains,animate,onAnimate,actions}){
+  showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode,actions}){
   const gallery=!!manifest;
   const industry=gallery&&sel.industry?findIndustry(manifest,sel.industry):null;
   const versions=industry?(industry.versions||[]).map(v=>v.version):[];
@@ -2005,7 +2035,7 @@ function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,on
         onChange:e=>onSelect({version:e.target.value})},
         versions.map(v=>h('option',{key:v,value:v},v.toUpperCase()))
       ),
-      graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate}),
+      graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode}),
       actions
     )
   );
@@ -2204,6 +2234,183 @@ function Tour({onClose,getNodeRect}){
   );
 }
 
+function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,onTableClick,onEdgeClick}){
+  const canvasRef=useRef(null);
+  const surfaceRef=useRef(null);
+  const cardRefs=useRef({});
+  const rowRefs=useRef({});
+  const [lines,setLines]=useState([]);
+  const [expandedTables,setExpandedTables]=useState(new Set());
+
+  const modelTables=useMemo(()=>{
+    const result=[];
+    Object.entries(graphData.domainHierarchy||{}).forEach(([domainName,domainData])=>{
+      Object.entries(domainData.tables||{}).forEach(([tableName,tableData])=>{
+        result.push({...tableData,name:tableName,domain:domainName,
+          color:domainData.color||'var(--brand)',
+          id:tableData.full_id||`${domainName}.${tableName}`});
+      });
+    });
+    return result;
+  },[graphData]);
+
+  const visible={tables:[],edges:[]};
+  const degree={};
+  (graphData.edges||[]).forEach(edge=>{
+    degree[edge.data.source]=(degree[edge.data.source]||0)+1;
+    degree[edge.data.target]=(degree[edge.data.target]||0)+1;
+  });
+  const allIds=new Set(modelTables.map(table=>table.id));
+  let visibleIds=allIds;
+  if(erdCoreOnly){
+    visibleIds=new Set(modelTables.slice().sort((a,b)=>
+      (degree[b.id]||0)-(degree[a.id]||0)||a.id.localeCompare(b.id)
+    ).slice(0,Math.max(12,Math.ceil(modelTables.length*0.2))).map(table=>table.id));
+  }
+  const focusId=filterState.type==='table'?filterState.value:null;
+  if(focusId){
+    const directEdges=(graphData.edges||[]).filter(edge=>edge.data.source===focusId);
+    visibleIds=new Set([focusId,...directEdges.map(edge=>edge.data.target)]);
+  }
+  visible.tables=modelTables.filter(table=>visibleIds.has(table.id)).sort((a,b)=>{
+    if(focusId) {
+      if(a.id===focusId)return -1;
+      if(b.id===focusId)return 1;
+    }
+    return a.domain.localeCompare(b.domain)||a.name.localeCompare(b.name);
+  });
+  visible.edges=(graphData.edges||[]).filter(edge=>
+    visibleIds.has(edge.data.source)&&visibleIds.has(edge.data.target)
+  );
+
+  useLayoutEffect(()=>{
+    const redraw=()=>{
+      const canvas=canvasRef.current;
+      const surface=surfaceRef.current;
+      if(!canvas||!surface)return;
+      const canvasRect=surface.getBoundingClientRect();
+      const cardRects=Object.entries(cardRefs.current).map(([id,element])=>{
+        if(!element)return null;
+        const rect=element.getBoundingClientRect();
+        return {id,left:rect.left-canvasRect.left,right:rect.right-canvasRect.left,
+          top:rect.top-canvasRect.top,bottom:rect.bottom-canvasRect.top};
+      }).filter(Boolean);
+      const clearSegment=(from,to,sourceId,targetId)=>{
+        if(from.x!==to.x&&from.y!==to.y)return false;
+        return cardRects.filter(rect=>rect.id!==sourceId&&rect.id!==targetId).every(rect=>{
+          const margin=12;
+          const left=rect.left-margin,right=rect.right+margin;
+          const top=rect.top-margin,bottom=rect.bottom+margin;
+          if(from.y===to.y){
+            return from.y<top||from.y>bottom||Math.max(from.x,to.x)<left||Math.min(from.x,to.x)>right;
+          }
+          return from.x<left||from.x>right||Math.max(from.y,to.y)<top||Math.min(from.y,to.y)>bottom;
+        });
+      };
+      const routeAround=(start,end,sourceId,targetId)=>{
+        const xChannels=[start.x,end.x,...cardRects.flatMap(rect=>[rect.left-28,rect.right+28])];
+        const yChannels=[start.y,end.y,...cardRects.flatMap(rect=>[rect.top-28,rect.bottom+28])];
+        const candidates=[];
+        const addCandidate=points=>{
+          const clean=points.filter((point,index)=>index===0||point.x!==points[index-1].x||point.y!==points[index-1].y);
+          if(clean.every((point,index)=>index===0||clearSegment(clean[index-1],point,sourceId,targetId))){
+            const length=clean.slice(1).reduce((sum,point,index)=>sum+
+              Math.abs(point.x-clean[index].x)+Math.abs(point.y-clean[index].y),0);
+            candidates.push({points:clean,length});
+          }
+        };
+        xChannels.forEach(channelX=>{
+          addCandidate([start,{x:channelX,y:start.y},{x:channelX,y:end.y},end]);
+          yChannels.forEach(channelY=>addCandidate([
+            start,{x:channelX,y:start.y},{x:channelX,y:channelY},{x:end.x,y:channelY},end
+          ]));
+        });
+        yChannels.forEach(channelY=>addCandidate([start,{x:start.x,y:channelY},{x:end.x,y:channelY},end]));
+        if(!candidates.length)return [start,end];
+        candidates.sort((a,b)=>a.length-b.length);
+        return candidates[0].points;
+      };
+      const next=visible.edges.map((edge,edgeIndex)=>{
+        const source=rowRefs.current[`${edge.data.source}:${edge.data.source_column}`]
+          ||cardRefs.current[edge.data.source];
+        const targetTable=modelTables.find(table=>table.id===edge.data.target);
+        const targetPk=targetTable&&targetTable.attributes.find(attribute=>attribute.pk);
+        const target=rowRefs.current[`${edge.data.target}:${edge.data.target_column}`]
+          ||(targetPk&&rowRefs.current[`${edge.data.target}:${targetPk.name}`])
+          ||cardRefs.current[edge.data.target];
+        if(!source||!target)return null;
+        const sourceRect=source.getBoundingClientRect();
+        const targetRect=target.getBoundingClientRect();
+        const sourceCenterX=sourceRect.left+sourceRect.width/2;
+        const sourceCenterY=sourceRect.top+sourceRect.height/2;
+        const targetCenterX=targetRect.left+targetRect.width/2;
+        const targetCenterY=targetRect.top+targetRect.height/2;
+        const horizontal=Math.abs(sourceCenterX-targetCenterX)>=Math.abs(sourceCenterY-targetCenterY);
+        const sourceOnRight=sourceCenterX<targetCenterX;
+        const sourceOnBottom=sourceCenterY<targetCenterY;
+        const routeOffset=(edgeIndex-(visible.edges.length-1)/2)*18;
+        const start={x:(horizontal?(sourceOnRight?sourceRect.right:sourceRect.left):sourceCenterX)-canvasRect.left,
+          y:(horizontal?sourceCenterY:(sourceOnBottom?sourceRect.bottom:sourceRect.top))-canvasRect.top};
+        const end={x:(horizontal?(sourceOnRight?targetRect.left:targetRect.right):targetCenterX)-canvasRect.left,
+          y:(horizontal?targetCenterY:(sourceOnBottom?targetRect.top:targetRect.bottom))-canvasRect.top};
+        const points=routeAround(start,end,edge.data.source,edge.data.target);
+        const labelSegment=points.slice(1).map((point,index)=>({from:points[index],to:point,
+          length:Math.abs(point.x-points[index].x)+Math.abs(point.y-points[index].y)})).sort((a,b)=>b.length-a.length)[0]||{from:start,to:end};
+        return {...edge.data,horizontal,
+          points,
+          labelX:(labelSegment.from.x+labelSegment.to.x)/2,
+          labelY:(labelSegment.from.y+labelSegment.to.y)/2
+        };
+      }).filter(Boolean);
+      setLines(next);
+    };
+    redraw();
+    window.addEventListener('resize',redraw);
+    return()=>window.removeEventListener('resize',redraw);
+  },[graphData,filterState,erdCoreOnly,expandedTables,visible.tables.length,visible.edges.length]);
+
+  const slots=[[1,2],[2,1],[2,3],[3,2],[1,1],[1,3],[3,1],[3,3]];
+  return h('div',{ref:canvasRef,style:{position:'absolute',inset:0,overflow:'auto',padding:focusId?'80px':'40px',background:'var(--bg)'}},
+    h('div',{ref:surfaceRef,style:{position:'relative',minWidth:focusId?'1060px':'900px',minHeight:focusId?'800px':'100%',transform:`scale(${erdZoom})`,transformOrigin:'top left'}},
+    h('svg',{style:{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:1},'aria-hidden':'true'},
+      h('defs',null,
+        h('marker',{id:'erd-many',viewBox:'0 0 12 12',refX:10,refY:6,markerWidth:8,markerHeight:8,orient:'auto-start-reverse'},
+          h('path',{d:'M10 1L2 6L10 11',fill:'none',stroke:'var(--flow-neutral)',strokeWidth:1.5})),
+        h('marker',{id:'erd-one',viewBox:'0 0 12 12',refX:10,refY:6,markerWidth:8,markerHeight:8,orient:'auto'},
+          h('path',{d:'M3 1V11',stroke:'var(--flow-neutral)',strokeWidth:1.5}))
+      ),
+      lines.map(edge=>h('g',{key:edge.id},
+        h('path',{d:edge.points.map((point,index)=>(index?'L':'M')+` ${point.x} ${point.y}`).join(' '),
+          fill:'none',stroke:'var(--flow-neutral)',strokeWidth:1.5,markerStart:'url(#erd-many)',markerEnd:'url(#erd-one)',style:{pointerEvents:'auto',cursor:'pointer'},onClick:()=>onEdgeClick(edge)}),
+        h('text',{x:edge.labelX,y:edge.labelY-7,fill:'var(--muted)',fontSize:10,textAnchor:'middle',style:{paintOrder:'stroke',stroke:'var(--bg)',strokeWidth:5}},edge.source_column)
+      ))
+    ),
+    h('div',{style:{position:'relative',zIndex:2,display:'grid',gridTemplateColumns:focusId?'repeat(3,minmax(300px,340px))':'repeat(auto-fill,minmax(300px,340px))',gap:focusId?'64px':'36px',alignItems:'start',justifyContent:focusId?'center':'start'}},
+      visible.tables.map((table,index)=>{
+        const attrs=table.attributes||[];
+        const expanded=expandedTables.has(table.id);
+        const shownAttrs=expanded?attrs:attrs.filter((attr,attrIndex)=>attrIndex<6||attr.pk||attr.fk);
+        const hiddenCount=attrs.length-shownAttrs.length;
+        const slot=focusId?(table.id===focusId?[2,2]:slots[(index-1)%slots.length]):null;
+        return h('div',{key:table.id,ref:element=>{cardRefs.current[table.id]=element;},style:{gridColumn:slot&&slot[0],gridRow:slot&&slot[1],background:'var(--card)',border:`2px solid ${table.color}`,borderRadius:5,boxShadow:'var(--shadow-lg)',overflow:'hidden',cursor:'pointer',minWidth:300},onClick:()=>onTableClick(table.id)},
+          showDomains&&h('div',{style:{padding:'5px 12px 0',background:'var(--well)',fontSize:9,color:'var(--muted)',fontWeight:650}},table.domain.replace(/_/g,' ').toUpperCase()),
+          h('div',{style:{padding:'9px 12px',background:'var(--well)',borderBottom:'1px solid var(--line-strong)',fontSize:13,fontWeight:750,color:'var(--ink)',letterSpacing:'.03em'}},table.name.toUpperCase()),
+          h('div',null,shownAttrs.map(attr=>{
+            const marker=attr.pk?'PK':attr.fk?'FK':'';
+            return h('div',{key:attr.name,ref:element=>{rowRefs.current[`${table.id}:${attr.name}`]=element;},style:{display:'grid',gridTemplateColumns:'28px minmax(0,1fr) auto',gap:5,alignItems:'center',padding:'5px 10px',borderBottom:'1px solid var(--veil)',fontFamily:'monospace',fontSize:10}},
+              h('span',{style:{color:attr.pk?'var(--m-gold)':attr.fk?'var(--danger)':'transparent',fontWeight:750}},marker),
+              h('span',{style:{color:'var(--ink)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},attr.name),
+              h('span',{style:{color:'var(--g-amber-line)',whiteSpace:'nowrap'}},attr.type||'UNKNOWN')
+            );
+          }),
+          hiddenCount>0&&h('button',{type:'button',style:{width:'100%',padding:'6px 10px',border:0,borderTop:'1px solid var(--line)',background:'transparent',color:'var(--brand)',fontSize:10,cursor:'pointer',textAlign:'left'},onClick:e=>{e.stopPropagation();setExpandedTables(current=>{const next=new Set(current);if(next.has(table.id))next.delete(table.id);else next.add(table.id);return next;});}},expanded?`Show fewer columns`:`Show ${hiddenCount} more columns`))
+        );
+      })
+    )
+    )
+  );
+}
+
 function App(){
   // Graph state
   const [graphData,setGraphData]=useState(null);
@@ -2220,6 +2427,9 @@ function App(){
 
   // UI state
   const [showDomains,setShowDomains]=useState(true);
+  const [erdMode,setErdMode]=useState(false);
+  const [erdCoreOnly,setErdCoreOnly]=useState(false);
+  const [erdZoom,setErdZoom]=useState(1);
   const [animate,setAnimate]=useState(currentAnimate);
   const [sizeScale,setSizeScale]=useState(1.0);
   const [filterState,setFilterState]=useState({type:null,value:null});
@@ -2609,6 +2819,32 @@ function App(){
     const viewKey=type?`${type}:${typeof value==='object'?JSON.stringify(value):value}`:'main';
     const curSizes=(domainSizes[viewKey]||{});
 
+    if(erdMode){
+      const tableNodes=nodes.filter(n=>n.data&&n.data.type==='table');
+      const degree={};
+      edges.forEach(e=>{
+        degree[e.data.source]=(degree[e.data.source]||0)+1;
+        degree[e.data.target]=(degree[e.data.target]||0)+1;
+      });
+      const coreIds=new Set(tableNodes.slice().sort((a,b)=>{
+        const score=(degree[b.data.id]||0)-(degree[a.data.id]||0);
+        return score||String(a.data.label).localeCompare(String(b.data.label));
+      }).slice(0,Math.max(12,Math.ceil(tableNodes.length*0.2))).map(n=>n.data.id));
+      let visibleIds=erdCoreOnly?coreIds:new Set(tableNodes.map(n=>n.data.id));
+      let focusId=null;
+      if(type==='table'&&value){
+        focusId=value;
+        const focusEdges=edges.filter(e=>e.data.source===focusId);
+        visibleIds=new Set([focusId,...focusEdges.map(e=>e.data.target)]);
+      }
+      const erdNodes=tableNodes.filter(n=>visibleIds.has(n.data.id)).map(n=>{
+        const {parent,...data}=n.data||{};
+        return {...n,data,classes:'table-node erd-node'+(n.data.id===focusId?' erd-center-node':'')};
+      });
+      const erdEdges=edges.filter(e=>visibleIds.has(e.data.source)&&visibleIds.has(e.data.target));
+      return [...erdNodes,...erdEdges.map(e=>focusId?{...e,classes:'fk-edge erd-focus-edge'}:e)];
+    }
+
     // Apply domain sizes to domain nodes
     const applyDomainSizes=(els)=>els.map(el=>{
       if(el.data&&el.data.type==='domain'){
@@ -2757,7 +2993,7 @@ function App(){
       return n;
     });
     return [...allNodes,...edges];
-  },[graphData,graphIndexes,filterState,domainSizes]);
+  },[graphData,graphIndexes,filterState,domainSizes,erdMode,erdCoreOnly]);
 
   // ── Push elements to Cytoscape ─────────────────────────
   useEffect(()=>{
@@ -2780,7 +3016,28 @@ function App(){
       cy.add(paintElements(validElements,resolveTheme()));
     });
     // Choose layout strategy
-    if(!type){
+    if(erdMode){
+      const erdNodes=cy.nodes('.erd-node').sort((a,b)=>{
+        const da=(a.data('domain')||''), db=(b.data('domain')||'');
+        if(da!==db) return da<db?-1:1;
+        const la=(a.data('label')||''), lb=(b.data('label')||'');
+        return la<lb?-1:la>lb?1:0;
+      });
+      const focusNode=cy.nodes('.erd-center-node');
+      if(focusNode.length){
+        focusNode.position({x:0,y:0});
+        const related=erdNodes.difference(focusNode);
+        const radius=Math.max(420,related.length*110);
+        related.forEach((node,i)=>{
+          const angle=(2*Math.PI*i/Math.max(1,related.length))-(Math.PI/2);
+          node.position({x:radius*Math.cos(angle),y:radius*Math.sin(angle)});
+        });
+      } else {
+        const cols=Math.max(1,Math.ceil(Math.sqrt(erdNodes.length)));
+        const colWidth=300, rowHeight=180;
+        erdNodes.forEach((node,i)=>node.position({x:(i%cols)*colWidth,y:Math.floor(i/cols)*rowHeight}));
+      }
+    } else if(!type){
       // Circular grouped by domain — tables stay compound children so dragging a box moves them
       const tblNodes=cy.nodes('.table-node').sort((a,b)=>{
         const da=(a.data('domain')||''), db=(b.data('domain')||'');
@@ -2857,7 +3114,7 @@ function App(){
     // destination, nor once the viewer has taken the viewport. The view is only
     // marked as introduced once a move actually starts, so a fit that landed on a
     // not-yet-measured viewport leaves the next one free to try again.
-    const viewKey=`${type||''}::${filterState.value||''}`;
+    const viewKey=`${erdMode?'erd:':''}${type||''}::${filterState.value||''}`;
     const introduced=()=>lastFitKeyRef.current.graph===graphData&&lastFitKeyRef.current.key===viewKey;
     const mark=()=>{lastFitKeyRef.current={graph:graphData,key:viewKey};};
     const camFree=()=>!viewerTookOverRef.current&&(!introRef.current||introRef.current.finished);
@@ -2965,15 +3222,16 @@ function App(){
       onJump:openCmd,
       onLoadJson:handleLoadJsonFile,
       showDomains,onShowDomains:setShowDomains,animate,onAnimate:setAnimate,
+      erdMode,onErdMode:setErdMode,erdCoreOnly,onErdCoreOnly:setErdCoreOnly,
       actions:h(React.Fragment,null,
         // Graph controls do nothing without a graph, so they stay hidden until
         // one is loaded rather than sitting there inert.
         graphData&&h(React.Fragment,null,
           h('button',{className:'tbtn icononly',title:'Zoom out','aria-label':'Zoom out',
-            onClick:()=>cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*0.8)},
+            onClick:()=>erdMode?setErdZoom(z=>Math.max(0.5,z*0.8)):cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*0.8)},
             h(ToolbarIcon,{name:'zoomOut'})),
           h('button',{className:'tbtn icononly',title:'Zoom in','aria-label':'Zoom in',
-            onClick:()=>cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*1.25)},
+            onClick:()=>erdMode?setErdZoom(z=>Math.min(2.5,z*1.25)):cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*1.25)},
             h(ToolbarIcon,{name:'zoomIn'})),
           h('button',{className:'tbtn icononly',title:'Decrease node and label size','aria-label':'Decrease font size',
             onClick:()=>setSizeScale(s=>Math.max(0.5,s-0.2))},
@@ -2982,7 +3240,7 @@ function App(){
             onClick:()=>setSizeScale(s=>Math.min(3,s+0.2))},
             h(ToolbarIcon,{name:'fontUp'})),
           h('button',{className:'tbtn icononly',title:'Fit graph to view','aria-label':'Fit to view',
-            onClick:()=>cyRef.current&&cyRef.current.fit(50)},
+            onClick:()=>erdMode?setErdZoom(1):cyRef.current&&cyRef.current.fit(50)},
             h(ToolbarIcon,{name:'fit'}))
         ),
         gallery&&graphData&&h('button',{className:'iconbtn',title:'Take a guided tour','aria-label':'Take a guided tour',
@@ -3097,8 +3355,12 @@ function App(){
           )
         ),
 
-        // Cytoscape container
-        h('div',{ref:containerRef,style:{width:'100%',height:'100%',display:graphData?'block':'none'}})
+        // Traditional ERD uses real DOM table cards so columns stay aligned and
+        // the relationship layer can terminate against the visible cards.
+        erdMode&&graphData&&h(SqlDbmErdView,{graphData,filterState,erdCoreOnly,showDomains,erdZoom,
+          onTableClick:handleClickTable,
+          onEdgeClick:data=>{setSelectedEdge(data);setSelectedNode(null);setTreeClick(null);}}),
+        h('div',{ref:containerRef,style:{width:'100%',height:'100%',display:graphData&&!erdMode?'block':'none'}})
       ),
 
       // Right panel
