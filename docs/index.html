@@ -584,6 +584,7 @@
 
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card);flex-shrink:0}
   .seg button{padding:5px 11px;border:0;background:transparent;color:var(--muted);font-size:11px;
+    white-space:nowrap;
     font-weight:700;cursor:pointer;letter-spacing:.04em}
   .seg button+button{border-left:1px solid var(--line)}
   .seg button:hover{background:var(--veil);color:var(--ink)}
@@ -754,6 +755,146 @@
     font-size:10px;line-height:16px}
   .bmap-x:hover:not(:disabled){border-color:var(--line-strong);color:var(--danger)}
   .bmap-x:disabled{opacity:.3;cursor:not-allowed}
+  /* =====================================================================
+     DESIGN MODE
+     =====================================================================
+     The viewer turns into an editor. Nothing here is a second theme: every
+     surface takes the same neutrals and group slots the read-only chrome
+     does, so a model being edited still looks like the model. The only new
+     colour language is the change ledger — added / changed / removed — and
+     it is three group hues, not three new ones. */
+  .designbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0;
+    padding:7px 13px;background:var(--panel);border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-seam)}
+  .designbar .vrule{height:20px}
+  .designbar-note{font-size:11px;color:var(--faint);margin-left:auto;white-space:nowrap}
+  .saved-dot{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+  .saved-dot i{width:7px;height:7px;border-radius:50%;background:var(--g-green-line);display:block}
+  .saved-dot.dirty i{background:var(--g-amber-line)}
+
+  /* change ledger colours: added / modified / removed */
+  .chg-add{color:var(--g-green-ink)}
+  .chg-mod{color:var(--g-amber-ink)}
+  .chg-del{color:var(--g-rose-ink)}
+  .chg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+  .chg-dot.add{background:var(--g-green-line)}
+  .chg-dot.mod{background:var(--g-amber-line)}
+  .chg-dot.del{background:var(--g-rose-line)}
+  .chg-row{display:flex;align-items:center;gap:7px;width:100%;padding:6px 8px;
+    border:1px solid transparent;border-radius:7px;background:transparent;
+    color:var(--ink);font:inherit;font-size:11px;text-align:left;cursor:pointer}
+  .chg-row:hover{background:var(--veil);border-color:var(--line)}
+  .chg-row .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chg-row .sub{font-size:9.5px;color:var(--faint)}
+  .chg-strike{text-decoration:line-through;opacity:.7}
+
+  /* the row buttons that appear on hover in the outline while editing */
+  .row-act{width:18px;height:18px;padding:0;flex-shrink:0;display:none;
+    align-items:center;justify-content:center;background:transparent;
+    border:1px solid transparent;border-radius:4px;color:var(--muted);
+    cursor:pointer;font-size:10px;line-height:1}
+  .row-act:hover{background:var(--card);border-color:var(--line-strong);color:var(--ink)}
+  .tree-item:hover .row-act,.erd-card:hover .row-act{display:inline-flex}
+
+  /* ── dialogs ──────────────────────────────────────────── */
+  .dlg-scrim{position:fixed;inset:0;background:var(--scrim);z-index:5000;display:flex;
+    align-items:center;justify-content:center;padding:24px 16px}
+  .dlg{display:flex;flex-direction:column;width:min(980px,96vw);max-height:90vh;
+    background:var(--card);border:1px solid var(--line-strong);border-radius:14px;
+    box-shadow:var(--shadow-xl);overflow:hidden}
+  .dlg.sm{width:min(520px,96vw)}
+  .dlg.md{width:min(700px,96vw)}
+  .dlg-head{display:flex;align-items:center;gap:10px;padding:13px 16px;flex-shrink:0;
+    border-bottom:1px solid var(--line);background:var(--well)}
+  .dlg-head h3{margin:0;font-size:14px;font-weight:750;color:var(--ink)}
+  .dlg-head .sub{font-size:11px;color:var(--muted)}
+  .dlg-x{margin-left:auto;width:26px;height:26px;border:1px solid var(--line);
+    border-radius:7px;background:var(--card);color:var(--muted);cursor:pointer;font-size:14px;
+    display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .dlg-x:hover{color:var(--ink);border-color:var(--line-strong)}
+  .dlg-body{padding:14px 16px;overflow:auto;flex:1;min-height:0}
+  .dlg-foot{display:flex;align-items:center;gap:8px;padding:11px 16px;flex-shrink:0;
+    border-top:1px solid var(--line);background:var(--well)}
+  .dlg-foot .spacer{flex:1}
+
+  .fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .fld>label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--muted)}
+  .fld .hint{font-size:10px;color:var(--faint)}
+  .fldrow{display:grid;gap:10px;margin-bottom:11px}
+  input[type=text],input[type=search],textarea,select{background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;
+    font-family:inherit;width:100%;box-sizing:border-box}
+  textarea{resize:vertical;line-height:1.5;min-height:56px}
+  textarea:focus,input[type=search]:focus{border-color:var(--brand);outline:none}
+  input.mono,textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .req-bad{border-color:var(--danger)!important}
+
+  /* ── the column grid: the part that has to feel like a spreadsheet ── */
+  .colgrid{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .colgrid-head,.colgrid-row{display:grid;
+    grid-template-columns:26px minmax(120px,1.3fr) minmax(96px,.9fr) 34px minmax(150px,1.5fr) minmax(150px,2fr) 52px;
+    gap:0;align-items:center}
+  .colgrid-head{background:var(--well);border-bottom:1px solid var(--line-strong);
+    font-size:9.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .colgrid-head>div{padding:6px 7px}
+  .colgrid-body{max-height:46vh;overflow-y:auto}
+  .colgrid-row{border-bottom:1px solid var(--veil)}
+  .colgrid-row:hover{background:var(--well)}
+  .colgrid-row.is-pk{background:var(--g-amber-bg)}
+  .colgrid-row>div{padding:3px 4px;min-width:0}
+  .colgrid-row .idx{font-size:9.5px;color:var(--faint);text-align:center;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .colgrid input[type=text],.colgrid textarea{border-color:transparent;background:transparent;
+    padding:5px 6px;border-radius:5px;font-size:11.5px}
+  .colgrid input[type=text]:hover,.colgrid textarea:hover{background:var(--card);border-color:var(--line)}
+  .colgrid input[type=text]:focus,.colgrid textarea:focus{background:var(--card);border-color:var(--brand)}
+  .fk-cell{display:flex;align-items:center;gap:4px;min-width:0}
+  .fk-btn{flex:1;min-width:0;text-align:left;padding:5px 6px;border-radius:5px;
+    border:1px solid transparent;background:transparent;color:var(--danger);cursor:pointer;
+    font:inherit;font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fk-btn.empty{color:var(--faint)}
+  .fk-btn:hover{background:var(--card);border-color:var(--line)}
+  .rowbtns{display:flex;gap:2px;justify-content:flex-end;padding-right:5px}
+  .rowbtn{width:19px;height:19px;padding:0;display:inline-flex;align-items:center;
+    justify-content:center;background:transparent;border:1px solid transparent;border-radius:4px;
+    color:var(--faint);cursor:pointer;font-size:10px;line-height:1}
+  .rowbtn:hover{background:var(--card);border-color:var(--line-strong);color:var(--ink)}
+  .rowbtn.danger:hover{color:var(--danger);border-color:var(--danger-bd)}
+
+  /* ── issue list ───────────────────────────────────────── */
+  .issue{display:flex;gap:8px;align-items:flex-start;width:100%;padding:8px 9px;
+    border:1px solid var(--line);border-radius:8px;background:var(--card);margin-bottom:6px;
+    text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+  .issue:hover{border-color:var(--line-strong);background:var(--well)}
+  .issue .sev{font-size:9px;font-weight:800;letter-spacing:.05em;padding:1px 6px;border-radius:4px;
+    flex-shrink:0;margin-top:1px}
+  .sev-error{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-bd)}
+  .sev-warn{background:var(--g-amber-tile);color:var(--g-amber-ink);border:1px solid var(--g-amber-bd)}
+  .sev-info{background:var(--g-blue-tile);color:var(--g-blue-ink);border:1px solid var(--g-blue-bd)}
+  .issue .txt{min-width:0;flex:1}
+  .issue .txt b{display:block;font-size:11.5px;font-weight:650;margin-bottom:1px}
+  .issue .txt span{font-size:10.5px;color:var(--muted);line-height:1.45}
+
+  /* ── pickers ──────────────────────────────────────────── */
+  .pick-row{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;
+    background:transparent;color:var(--ink);font:inherit;font-size:12px;text-align:left;
+    border-radius:8px;cursor:pointer}
+  .pick-row:hover,.pick-row.cursor{background:var(--brand-wash);outline:1px solid var(--brand-bd)}
+  .pick-row .pk{font-size:10px;color:var(--faint);margin-left:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+  .pick-dom{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+  /* an entity card in the ERD carries its change state on the header strip */
+  .erd-card.is-add{outline:2px solid var(--g-green-line);outline-offset:1px}
+  .erd-card.is-mod{outline:2px dashed var(--g-amber-line);outline-offset:1px}
+  .chip-mini{font-size:8.5px;font-weight:800;letter-spacing:.05em;padding:0 5px;
+    border-radius:4px;line-height:14px;flex-shrink:0}
+  .chip-add{background:var(--g-green-tile);color:var(--g-green-ink)}
+  .chip-mod{background:var(--g-amber-tile);color:var(--g-amber-ink)}
+  .chip-del{background:var(--g-rose-tile);color:var(--g-rose-ink)}
+
 </style>
 </head>
 <body>
@@ -1414,7 +1555,8 @@ async function apiFetch(url){
 // ── Tree Component ─────────────────────────────────────────
 const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
                       onToggleDomain,onToggleTable,onClickDomain,onClickTable,onClickAttr,searchTerm,
-                      picked,onTogglePick,onTogglePickMany})=>{
+                      picked,onTogglePick,onTogglePickMany,
+                      designOn,changeCur,onEditDomain,onEditTable,onAddEntity})=>{
   const {color,tables={},subdomains={},division=''}=domainData;
   const isExpanded=expandedDomains.has(domainName);
   const tableEntries=useMemo(()=>Object.entries(tables).sort((a,b)=>a[0].localeCompare(b[0])),[tables]);
@@ -1454,7 +1596,14 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
           style:{fontSize:11,color:'var(--brand)',cursor:'pointer',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},
           onClick:()=>onClickTable(fullId)
         },tname),
-        h('span',{style:{fontSize:9,color:'var(--line-strong)',marginLeft:5}},'('+sortedAttrs.length+')')
+        h('span',{style:{fontSize:9,color:'var(--line-strong)',marginLeft:5}},'('+sortedAttrs.length+')'),
+        designOn&&changeCur[fullId]&&h('span',{
+          className:'chg-dot '+(changeCur[fullId].state==='added'?'add':'mod'),
+          style:{marginLeft:5},
+          title:changeCur[fullId].state==='added'?'Added in this session':'Changed in this session'}),
+        designOn&&h('button',{className:'row-act',style:{marginLeft:4},
+          title:'Edit '+tname,
+          onClick:e=>{e.stopPropagation();onEditTable(fullId);}},'\u270e')
       ),
       isTblExp&&h('div',{key:'attrs'},[
         ...sortedAttrs.slice(0,TREE_ATTR_CAP).map(attr=>{
@@ -1510,7 +1659,13 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
         divHues[divLower]&&h('span',{style:{
           display:'inline-block',padding:'1px 4px',...hueChip(divHues[divLower]),
           borderRadius:3,fontSize:8,fontWeight:'bold',marginLeft:5,flexShrink:0,lineHeight:'12px'
-        }},divAbbr[divLower]||divLower.slice(0,3).toUpperCase())
+        }},divAbbr[divLower]||divLower.slice(0,3).toUpperCase()),
+        designOn&&h('button',{className:'row-act',style:{marginLeft:4},
+          title:'Add an entity to '+domainName,
+          onClick:e=>{e.stopPropagation();onAddEntity(domainName);}},'+'),
+        designOn&&h('button',{className:'row-act',
+          title:'Edit the '+domainName+' domain',
+          onClick:e=>{e.stopPropagation();onEditDomain(domainName);}},'\u270e')
       )
     ),
     showTables&&h('div',{},
@@ -1539,7 +1694,8 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
 
 // ── Node Info Panel ────────────────────────────────────────
 function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSizes,setDomainSizes,filterState,
-                        picked,onTogglePick}){
+                        picked,onTogglePick,design}){
+  const designOn=!!(design&&design.on);
   if(!graphData) return h('div',{style:{padding:'15px'}},
     h('h3',{className:'section-header',style:{borderBottom:'1px solid var(--line)',paddingBottom:10,marginBottom:15}},'📌 Details'),
     h('p',{style:{color:'var(--muted)',fontSize:12,fontStyle:'italic'}},'Click a node to see details'),
@@ -1582,6 +1738,18 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
           h('span',{style:{color:'var(--ink)',fontSize:11,marginLeft:4}},e.target_table),
         ),
         h('div',{style:{fontSize:10,color:'var(--muted)',marginLeft:16}},'Column: ',h('span',{style:{color:'var(--m-gold)'}},e.target_column))
+      ),
+      designOn&&h('div',{style:{marginTop:12,display:'flex',flexDirection:'column',gap:6}},
+        h('button',{className:'btn',style:{justifyContent:'center'},
+          title:'Open the entity that carries this key',
+          onClick:()=>design.onEditEntity(e.source)},'\u270e Edit '+e.source_table),
+        h('button',{className:'btn',style:{justifyContent:'center',color:'var(--danger)'},
+          title:'Clear the foreign key — the column itself stays',
+          onClick:()=>{
+            if(window.confirm('Remove the relationship '+e.source_table+'.'+e.source_column+
+              ' \u2192 '+e.target_table+'?\n\nThe column stays on '+e.source_table+
+              '; only the reference is cleared.')) design.onDropEdge(e);
+          }},'\u2715 Remove relationship')
       )
     );
   }
@@ -1658,7 +1826,9 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
     return h('div',{style:{padding:'15px',overflowY:'auto',height:'100%',display:'flex',flexDirection:'column'}},
       h('div',{style:{display:'flex',alignItems:'center',marginBottom:15}},
         h('div',{style:{width:20,height:20,background:nodeData.color,borderRadius:4,marginRight:10}}),
-        h('span',{style:{fontSize:16,fontWeight:'bold',color:'var(--ink)'}},(dname||'').toUpperCase())
+        h('span',{style:{fontSize:16,fontWeight:'bold',color:'var(--ink)',flex:1}},(dname||'').toUpperCase()),
+        designOn&&h('button',{className:'tbtn',title:'Edit this domain',
+          onClick:()=>design.onEditDomain(dname)},'\u270e Edit')
       ),
       h('div',{className:'domain-box',style:{marginBottom:10}},
         h('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
@@ -1760,6 +1930,12 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
         tags.length>0&&h('span',{style:{color:'var(--g-violet-line)',fontSize:11}},
           '🏷️ '+tags.length+' tags'),
       ),
+      designOn&&h('div',{style:{display:'flex',gap:6,marginBottom:10}},
+        h('button',{className:'btn btn-accent',style:{flex:1,justifyContent:'center'},
+          title:'Open this entity in the editor',
+          onClick:()=>design.onEditEntity(nodeData.id)},'\u270e Edit entity'),
+        h('button',{className:'btn',title:'Relate this entity to another',
+          onClick:()=>design.onRelate(nodeData.id)},'\u21c4')),
       onTogglePick&&h('button',{className:isPicked?'btn btn-accent':'btn',
         title:isPicked?'Remove this product from the selection':'Add this product to the selection',
         style:{width:'100%',marginBottom:10},
@@ -1813,7 +1989,11 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
         nodeData.pk&&h('div',{style:{color:'var(--m-gold)',fontSize:11,marginTop:4}},'🔑 Primary Key'),
         nodeData.fk&&h('div',{style:{color:'var(--danger)',fontSize:11,marginTop:4}},'🔗 FK → '+nodeData.fk)
       ),
-      nodeData.desc&&h('p',{style:{color:'var(--ink)',fontSize:12,lineHeight:1.6}},nodeData.desc)
+      nodeData.desc&&h('p',{style:{color:'var(--ink)',fontSize:12,lineHeight:1.6}},nodeData.desc),
+      designOn&&h('button',{className:'btn',style:{width:'100%',justifyContent:'center',marginTop:12},
+        title:'Edit this column where it lives',
+        onClick:()=>design.onEditEntity(nodeData.domain+'.'+nodeData.table)},
+        '\u270e Edit in '+nodeData.table)
     );
   }
   return null;
@@ -2683,7 +2863,7 @@ function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,viewMode,
    graph buttons so this stays presentational and App keeps the cytoscape refs. */
 function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,onLoadJson,
   showDomains,onShowDomains,animate,onAnimate,viewMode,onViewMode,
-  erdCoreOnly,onErdCoreOnly,actions}){
+  erdCoreOnly,onErdCoreOnly,designMode,onDesignMode,actions}){
   const gallery=!!manifest;
   const industry=gallery&&sel.industry?findIndustry(manifest,sel.industry):null;
   const versions=industry?(industry.versions||[]).map(v=>v.version):[];
@@ -2794,6 +2974,12 @@ function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,on
       ),
       graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,
                                      viewMode,onViewMode,erdCoreOnly,onErdCoreOnly}),
+      graphData&&h('div',{className:'seg','data-tour':'design',role:'group','aria-label':'Mode'},
+        h('button',{className:designMode?'':'on',title:'Read the model as it ships',
+          'aria-pressed':!designMode,onClick:()=>onDesignMode(false)},'Explore'),
+        h('button',{className:designMode?'on':'',
+          title:'Change the model with the business in the room',
+          'aria-pressed':designMode,onClick:()=>onDesignMode(true)},'\u270e Design')),
       actions
     )
   );
@@ -2869,6 +3055,8 @@ const TOUR_STEPS=[
     body:'Every circle is a data product (a table). Click one to see its columns and keys in the panel on the right. Double-click to drill into just that table and its foreign-key neighbours.'},
   {target:'views',place:'right',title:'Build your own view',
     body:'Tick the products you care about in the tree \u2014 or add the one you are looking at from the details panel \u2014 then save the selection as a named view. Views live under the \u2605 Views tab, in this browser only.'},
+  {target:'design',place:'bottom',title:'Make it your model',
+    body:'An industry model is a starting point. Switch to Design and you can rename entities into your organisation\u2019s language, drop what is out of scope, add what is missing and wire new relationships \u2014 with the change list always showing what moved from the standard, and every line revertible.'},
   {target:'download',place:'bottom',title:'Download the model',
     body:'Export the whole model as an Excel workbook — every table, column, data type and key — ready to share or hand to your data team.'},
   {target:'repo',place:'bottom',title:'Open the model & install it',
@@ -3266,7 +3454,7 @@ function erdPathD(points,radius){
   return d+' L '+last.x+' '+last.y;
 }
 
-function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,selectedEdgeId,onTableClick,onEdgeClick}){
+function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,selectedEdgeId,onTableClick,onEdgeClick,design}){
   const canvasRef=useRef(null);
   const surfaceRef=useRef(null);
   const cardRefs=useRef({});
@@ -3517,9 +3705,14 @@ function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,se
         const shownAttrs=expanded?attrs:attrs.filter((attr,attrIndex)=>attrIndex<6||attr.pk||attr.fk);
         const hiddenCount=attrs.length-shownAttrs.length;
         const slot=focusId?(table.id===focusId?[2,2]:slots[(index-1)%slots.length]):null;
-        return h('div',{key:table.id,ref:element=>{cardRefs.current[table.id]=element;},style:{gridColumn:slot&&slot[0],gridRow:slot&&slot[1],background:'var(--card)',border:`2px solid ${table.color}`,borderRadius:5,boxShadow:'var(--shadow-lg)',overflow:'hidden',cursor:'pointer',minWidth:300},onClick:()=>onTableClick(table.id)},
+        const chg=design&&design.on?design.changeCur[table.id]:null;
+        return h('div',{key:table.id,ref:element=>{cardRefs.current[table.id]=element;},className:'erd-card'+(chg?(chg.state==='added'?' is-add':' is-mod'):''),style:{gridColumn:slot&&slot[0],gridRow:slot&&slot[1],background:'var(--card)',border:`2px solid ${table.color}`,borderRadius:5,boxShadow:'var(--shadow-lg)',overflow:'hidden',cursor:'pointer',minWidth:300},onClick:()=>onTableClick(table.id)},
           showDomains&&h('div',{style:{padding:'5px 12px 0',background:'var(--well)',fontSize:9,color:'var(--muted)',fontWeight:650}},table.domain.replace(/_/g,' ').toUpperCase()),
-          h('div',{style:{padding:'9px 12px',background:'var(--well)',borderBottom:'1px solid var(--line-strong)',fontSize:13,fontWeight:750,color:'var(--ink)',letterSpacing:'.03em'}},table.name.toUpperCase()),
+          h('div',{style:{padding:'9px 12px',background:'var(--well)',borderBottom:'1px solid var(--line-strong)',fontSize:13,fontWeight:750,color:'var(--ink)',letterSpacing:'.03em',display:'flex',alignItems:'center',gap:6}},
+            h('span',{style:{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},table.name.toUpperCase()),
+            chg&&h('span',{className:'chip-mini '+(chg.state==='added'?'chip-add':'chip-mod')},chg.state==='added'?'NEW':'CHANGED'),
+            design&&design.on&&h('button',{className:'row-act',title:'Edit '+table.name,
+              onClick:e=>{e.stopPropagation();design.onEdit(table.id);}},'\u270e')),
           h('div',null,shownAttrs.map(attr=>{
             const marker=attr.pk?'PK':attr.fk?'FK':'';
             return h('div',{key:attr.name,ref:element=>{rowRefs.current[`${table.id}:${attr.name}`]=element;},style:{display:'grid',gridTemplateColumns:'28px minmax(0,1fr) auto',gap:5,alignItems:'center',padding:'5px 10px',borderBottom:'1px solid var(--veil)',fontFamily:'monospace',fontSize:10}},
@@ -3530,16 +3723,1387 @@ function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,se
           }),
           hiddenCount>0&&h('button',{type:'button',style:{width:'100%',padding:'6px 10px',border:0,borderTop:'1px solid var(--line)',background:'transparent',color:'var(--brand)',fontSize:10,cursor:'pointer',textAlign:'left'},onClick:e=>{e.stopPropagation();setExpandedTables(current=>{const next=new Set(current);if(next.has(table.id))next.delete(table.id);else next.add(table.id);return next;});}},expanded?`Show fewer columns`:`Show ${hiddenCount} more columns`))
         );
-      })
+      }).concat(design&&design.on?[h('button',{key:'__add',type:'button',
+        title:'Add an entity to this model',
+        onClick:()=>design.onAdd(),
+        style:{minWidth:300,minHeight:120,border:'2px dashed var(--line-strong)',borderRadius:5,
+               background:'transparent',color:'var(--muted)',fontSize:12,fontWeight:650,
+               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}},
+        '+  New entity')]:[])
     )
     )
   );
 }
 
+
+/* ═════════════════════════════════════════════════════════
+   DESIGN MODE — editing the loaded industry model
+   ═════════════════════════════════════════════════════════
+   A loaded industry model is a starting point, not an answer. Design mode
+   lets a data architect sit with the business and cut it down to what the
+   organisation actually has: rename entities into the language the room
+   uses, drop what is out of scope, add what the industry model never knew
+   about, and wire the relationships that result.
+
+   Nothing is edited in place. The parsed model stays pristine as the
+   BASELINE, every change is recorded in a separate EDITS overlay, and the
+   model on screen is `applyEdits(baseline, edits)`. Three things follow
+   from that and they are the reason it is built this way:
+
+     · the change ledger is free — the overlay IS the list of changes, so a
+       workshop can always answer "what did we change from the standard?"
+     · any change can be reverted to the industry model's version, at any
+       time, without an undo trail;
+     · what persists is only the delta (a few kB), not a 3 MB model, so a
+       browser can keep the work of a full day's workshop.
+
+   Overlay keys are BASELINE keys (`domain.product` as the industry model
+   named it), which is what makes a rename survivable: the entry stays put
+   while its content moves. */
+
+const EDITS_LS_KEY='dbx-model-edits';
+const DESIGN_LS_KEY='dbx-model-design';
+
+const COMMON_TYPES=['BIGINT','INT','SMALLINT','STRING','VARCHAR(255)','BOOLEAN','DATE',
+  'TIMESTAMP','DECIMAL(18,2)','DECIMAL(10,4)','DOUBLE','FLOAT','BINARY',
+  'ARRAY<STRING>','MAP<STRING,STRING>'];
+const PRODUCT_TYPES=['Master','Transaction','Reference','Event','Dimension','Fact',
+  'Aggregate','Bridge','Snapshot'];
+const DATA_TYPES=['master_data','transaction_data','reference_data','analytical_data','event_data'];
+const DIVISIONS=['operations','business','corporate'];
+
+function emptyEdits(){return{v:1,domains:{},products:{},order:[],note:''};}
+/* One shared empty overlay. Handing back a fresh object each render would make
+   the derived model recompute on every render while the key is still settling. */
+const NO_EDITS=emptyEdits();
+function editsEmpty(e){
+  if(!e) return true;
+  return !Object.keys(e.domains||{}).length&&!Object.keys(e.products||{}).length&&!(e.note||'').trim();
+}
+function readAllEdits(){
+  try{const raw=localStorage.getItem(EDITS_LS_KEY);const v=raw?JSON.parse(raw):{};
+    return v&&typeof v==='object'?v:{};}catch(_){return{};}
+}
+function writeEditsFor(key,edits){
+  if(!key) return true;
+  try{
+    const all=readAllEdits();
+    if(editsEmpty(edits)) delete all[key]; else all[key]=edits;
+    localStorage.setItem(EDITS_LS_KEY,JSON.stringify(all));
+    return true;
+  }catch(_){ return false; }   // quota — the caller warns, the edit still stands in memory
+}
+function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+function newAid(){return 'a'+Math.random().toString(36).slice(2,9);}
+
+/* The key a product is filed under: its name in the industry model, or a
+   synthetic one for a product the workshop invented. */
+function baseKey(dname,pname){return dname+'.'+pname;}
+
+/* ── Foreign keys, in the overlay's terms ──────────────────────────────
+   The model writes a relationship as the string "domain.entity.column". The
+   overlay cannot store that verbatim: rename the entity a second time and a
+   string captured after the first rename no longer names anything the overlay
+   knows about. So a stored key is written against an ANCHOR that never moves —
+   the entity's name in the industry model, or "@<overlay key>" for an entity
+   the workshop invented — and applyEdits resolves anchors to today's names on
+   the way out. `fkAnchor` splits either form; the one-segment "@" anchors are
+   why this cannot just be a slice(0,2). */
+function fkAnchor(fk){
+  const parts=String(fk||'').split('.');
+  if(parts[0].charAt(0)==='@') return {a:parts[0],c:parts.slice(1).join('.')};
+  return {a:parts.slice(0,2).join('.'),c:parts.slice(2).join('.')};
+}
+function fkJoin(a,c){return c?a+'.'+c:a;}
+function addedKey(){return 'new:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function isAddedKey(k){return /^new:/.test(k);}
+
+/* ── Apply the overlay ─────────────────────────────────────
+   Rebuilds the model from the baseline every time the overlay changes.
+   Untouched domains and products keep their identity (the same object is
+   reused), so this is a shallow relink rather than a deep copy of a
+   multi-megabyte model, and it stays fast enough to run on every edit. */
+function applyEdits(base,edits){
+  if(!base) return base;
+  if(editsEmpty(edits)) return base;
+  const dov=edits.domains||{}, pov=edits.products||{};
+  const domains=[], byName={}, domRename={};
+
+  (base.domains||[]).forEach(d=>{
+    const ov=dov[d.name];
+    if(ov&&ov.status==='deleted') return;
+    const nd={...d,...((ov&&ov.data)||{}),products:[]};
+    domRename[d.name]=nd.name;
+    domains.push(nd); byName[nd.name]=nd;
+  });
+  Object.keys(dov).forEach(k=>{
+    const ov=dov[k];
+    if(ov.status!=='added'||byName[ov.data.name]) return;
+    const nd={...ov.data,products:[]};
+    domains.push(nd); byName[nd.name]=nd;
+  });
+
+  const fallback=()=>domains[0];
+  const place=(dname,p)=>{const d=byName[dname]||fallback(); if(d) d.products.push(p);};
+
+  // Baseline products, in their original order, each following its override.
+  // pathMap records where each baseline product ended up so foreign keys that
+  // still name the old path can be re-pointed below.
+  const pathMap={}, colMap={};
+  (base.domains||[]).forEach(d=>{
+    if(dov[d.name]&&dov[d.name].status==='deleted') return;
+    (d.products||[]).forEach(p=>{
+      const key=baseKey(d.name,p.name);
+      const ov=pov[key];
+      const from=key;
+      if(ov){
+        if(ov.status==='deleted') return;
+        const dom=byName[ov.domain]?ov.domain:(domRename[d.name]||d.name);
+        const to=baseKey(dom,ov.data.name);
+        if(to!==from) pathMap[from]=to;
+        Object.keys(ov.ren||{}).forEach(oldCol=>{
+          const nu=ov.ren[oldCol];
+          if(nu&&nu!==oldCol) colMap[from+'.'+oldCol]=to+'.'+nu;
+        });
+        place(dom,ov.data);
+      }else{
+        const dom=domRename[d.name]||d.name;
+        if(dom!==d.name) pathMap[from]=baseKey(dom,p.name);
+        place(dom,p);
+      }
+    });
+  });
+  Object.keys(pov).forEach(k=>{
+    const ov=pov[k];
+    if(ov.status!=='added') return;
+    pathMap['@'+k]=baseKey(ov.domain,ov.data.name);
+    place(ov.domain,ov.data);
+  });
+
+  // Re-point every foreign key whose target has moved or been renamed. Copied
+  // lazily: a product nobody renamed keeps the baseline's own array.
+  const anyMap=Object.keys(pathMap).length||Object.keys(colMap).length;
+  if(anyMap){
+    domains.forEach(d=>{
+      let dirty=false;
+      const prods=(d.products||[]).map(p=>{
+        let touched=false;
+        const attrs=(p.attributes||[]).map(a=>{
+          const fk=(a.foreign_key_to||'').trim();
+          if(!fk) return a;
+          const {a:anchor,c:col}=fkAnchor(fk);
+          const first=col.split('.')[0];
+          if(col&&colMap[anchor+'.'+first]){
+            touched=true;
+            return{...a,foreign_key_to:colMap[anchor+'.'+first]};
+          }
+          if(pathMap[anchor]){touched=true;return{...a,foreign_key_to:fkJoin(pathMap[anchor],col)};}
+          // an anchor for an entity the workshop invented and then removed
+          if(anchor.charAt(0)==='@'){touched=true;return{...a,foreign_key_to:''};}
+          return a;
+        });
+        if(!touched) return p;
+        dirty=true;
+        return {...p,attributes:attrs};
+      });
+      if(dirty) d.products=prods;
+    });
+  }
+
+  return {...base,domains};
+}
+
+/* Today's name for a thing → the anchor the overlay files it under. An editor
+   hands back foreign keys as the modeller saw them on screen, which is always a
+   live "domain.entity.column"; this is what turns those back into anchors
+   before they are stored. */
+function anchorIndex(base,edits){
+  const rev={}, revCol={};
+  if(!base) return {rev,revCol};
+  const dov=edits.domains||{}, pov=edits.products||{}, domRename={};
+  (base.domains||[]).forEach(d=>{
+    const ov=dov[d.name];
+    domRename[d.name]=(ov&&ov.status!=='deleted'&&ov.data&&ov.data.name)||d.name;
+  });
+  (base.domains||[]).forEach(d=>{
+    (d.products||[]).forEach(p=>{
+      const from=baseKey(d.name,p.name), ov=pov[from];
+      if(ov&&ov.status==='deleted') return;
+      const to=ov?baseKey(ov.domain,ov.data.name):baseKey(domRename[d.name]||d.name,p.name);
+      if(to!==from) rev[to]=from;
+      if(ov&&ov.ren) Object.keys(ov.ren).forEach(oldCol=>{
+        revCol[to+'.'+ov.ren[oldCol]]=from+'.'+oldCol;
+      });
+    });
+  });
+  Object.keys(pov).forEach(k=>{
+    const ov=pov[k];
+    if(ov.status==='added') rev[baseKey(ov.domain,ov.data.name)]='@'+k;
+  });
+  return {rev,revCol};
+}
+function toAnchoredFk(fk,idx){
+  const f=String(fk||'').trim();
+  if(!f) return f;
+  const parts=f.split('.');
+  if(parts.length<2) return f;
+  const path=parts.slice(0,2).join('.'), col=parts.slice(2).join('.');
+  const first=col.split('.')[0];
+  if(col&&idx.revCol[path+'.'+first]) return idx.revCol[path+'.'+first];
+  if(idx.rev[path]) return fkJoin(idx.rev[path],col);
+  return f;
+}
+function anchorAttrs(attrs,base,edits){
+  const idx=anchorIndex(base,edits);
+  return (attrs||[]).map(a=>{
+    const fk=toAnchoredFk(a.foreign_key_to,idx);
+    return fk===(a.foreign_key_to||'')?a:{...a,foreign_key_to:fk};
+  });
+}
+
+/* ── Overlay mutators ──────────────────────────────────────
+   Every one of these returns a NEW overlay: the undo stack is a list of
+   overlays, so nothing may be mutated in place. */
+function baseIndex(base){
+  const domains={}, products={};
+  (base.domains||[]).forEach(d=>{
+    domains[d.name]=d;
+    (d.products||[]).forEach(p=>{products[baseKey(d.name,p.name)]={domain:d.name,product:p};});
+  });
+  return {domains,products};
+}
+function withDomain(edits,baseName,patch){
+  const next={...edits,domains:{...edits.domains}};
+  const cur=next.domains[baseName];
+  if(cur&&cur.status==='added'){
+    next.domains[baseName]={...cur,data:{...cur.data,...patch}};
+  }else{
+    next.domains[baseName]={status:'modified',data:{...((cur&&cur.data)||{}),...patch}};
+  }
+  // A domain rename has to drag its products' filing with it, or applyEdits
+  // would drop them into the first domain it finds.
+  if(patch.name){
+    const nn=patch.name;
+    const prev=cur?(cur.data||{}).name:baseName;
+    if(prev&&prev!==nn){
+      next.products={...next.products};
+      Object.keys(next.products).forEach(k=>{
+        const p=next.products[k];
+        if(p.domain===prev) next.products[k]={...p,domain:nn};
+      });
+    }
+  }
+  return next;
+}
+function withDomainAdd(edits,data){
+  const key='new:d'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  return {...edits,domains:{...edits.domains,[key]:{status:'added',data}}};
+}
+function withDomainDelete(edits,baseName,base){
+  const next={...edits,domains:{...edits.domains},products:{...edits.products}};
+  const cur=next.domains[baseName];
+  if(cur&&cur.status==='added'){
+    delete next.domains[baseName];
+    Object.keys(next.products).forEach(k=>{
+      if(next.products[k].domain===cur.data.name) delete next.products[k];
+    });
+    return next;
+  }
+  next.domains[baseName]={...(cur||{data:{}}),status:'deleted'};
+  // Its products go with it, so nothing is left pointing at a domain that is
+  // no longer in the model.
+  const idx=baseIndex(base||{domains:[]});
+  Object.keys(idx.products).forEach(k=>{
+    if(idx.products[k].domain===baseName){
+      const p=next.products[k];
+      if(p&&p.status==='added') delete next.products[k];
+      else next.products[k]={...(p||{}),status:'deleted'};
+    }
+  });
+  return next;
+}
+function withDomainRevert(edits,baseName,base){
+  const next={...edits,domains:{...edits.domains},products:{...edits.products}};
+  const cur=next.domains[baseName];
+  if(cur&&cur.status==='added'){
+    Object.keys(next.products).forEach(k=>{
+      if(next.products[k].domain===cur.data.name) delete next.products[k];
+    });
+  }
+  delete next.domains[baseName];
+  return next;
+}
+/* `key` is the baseline key for an industry-model product and a synthetic one
+   for an invented product. `ren` accumulates baseline-column → current-column
+   so a renamed column keeps its inbound foreign keys. */
+function withProduct(edits,key,domain,data,ren,base){
+  data={...data,attributes:anchorAttrs(data.attributes,base,edits)};
+  const cur=edits.products[key];
+  const status=cur?cur.status:(isAddedKey(key)?'added':'modified');
+  const entry={status:status==='deleted'?'modified':status,domain,data};
+  const merged={...((cur&&cur.ren)||{})};
+  if(ren) Object.keys(ren).forEach(oldName=>{
+    // compose: baseline→previous then previous→new becomes baseline→new
+    let origin=oldName;
+    Object.keys(merged).forEach(o=>{ if(merged[o]===oldName) origin=o; });
+    merged[origin]=ren[oldName];
+  });
+  if(Object.keys(merged).length) entry.ren=merged;
+  return {...edits,products:{...edits.products,[key]:entry}};
+}
+function withProductAdd(edits,domain,data,base){
+  data={...data,attributes:anchorAttrs(data.attributes,base,edits)};
+  return {...edits,products:{...edits.products,[addedKey()]:{status:'added',domain,data}}};
+}
+function withProductDelete(edits,key){
+  const next={...edits,products:{...edits.products}};
+  const cur=next.products[key];
+  if(isAddedKey(key)) delete next.products[key];
+  else next.products[key]={...(cur||{}),status:'deleted'};
+  return next;
+}
+function withProductRevert(edits,key){
+  const next={...edits,products:{...edits.products}};
+  delete next.products[key];
+  return next;
+}
+
+/* Where a baseline product lives now, and what state it is in. Every panel
+   that marks up a change asks this rather than working it out again. */
+function buildChangeMap(base,edits){
+  const cur={},   // current "domain.product" -> {state, key}
+        byKey={}; // overlay key -> {state, from, to, name}
+  if(!base) return {cur,byKey,counts:{added:0,modified:0,removed:0,domains:0}};
+  const dov=edits.domains||{}, pov=edits.products||{};
+  const domRename={}, domState={}, domKey={};
+  (base.domains||[]).forEach(d=>{
+    const ov=dov[d.name];
+    if(!ov){domRename[d.name]=d.name;domKey[d.name]=d.name;return;}
+    if(ov.status==='deleted'){domState[d.name]='removed';domRename[d.name]=d.name;return;}
+    domRename[d.name]=(ov.data&&ov.data.name)||d.name;
+    domKey[domRename[d.name]]=d.name;
+    domState[d.name]='modified';
+  });
+  Object.keys(dov).forEach(k=>{
+    if(dov[k].status!=='added') return;
+    domState[dov[k].data.name]='added'; domKey[dov[k].data.name]=k;
+  });
+
+  let added=0,modified=0,removed=0;
+  (base.domains||[]).forEach(d=>{
+    (d.products||[]).forEach(p=>{
+      const key=baseKey(d.name,p.name);
+      const ov=pov[key];
+      if(!ov){
+        const dn=domRename[d.name]||d.name;
+        if(dn!==d.name) cur[baseKey(dn,p.name)]={state:'moved',key};
+        return;
+      }
+      if(ov.status==='deleted'){
+        removed++;
+        byKey[key]={state:'removed',from:key,name:p.name,domain:d.name};
+        return;
+      }
+      modified++;
+      const to=baseKey(ov.domain,ov.data.name);
+      cur[to]={state:'modified',key};
+      byKey[key]={state:'modified',from:key,to,name:ov.data.name,domain:ov.domain,
+                  renamed:to!==key};
+    });
+  });
+  Object.keys(pov).forEach(k=>{
+    const ov=pov[k];
+    if(ov.status!=='added') return;
+    added++;
+    const to=baseKey(ov.domain,ov.data.name);
+    cur[to]={state:'added',key:k};
+    byKey[k]={state:'added',to,name:ov.data.name,domain:ov.domain};
+  });
+  const domains=Object.keys(domState).length;
+  return {cur,byKey,domState,domKey,counts:{added,modified,removed,domains,
+    total:added+modified+removed+domains}};
+}
+
+/* ── Validation ────────────────────────────────────────────
+   Runs over the edited model, not the baseline: it is there to catch what a
+   workshop breaks, so it only reports what the room can act on. */
+function validateModel(model){
+  if(!model) return [];
+  const issues=[];
+  const seenTable={}, pkOf={}, colsOf={};
+  const snake=/^[a-z][a-z0-9_]*$/;
+  (model.domains||[]).forEach(d=>{
+    (d.products||[]).forEach(p=>{
+      const id=baseKey(d.name,p.name);
+      pkOf[id]=p.primary_key||'';
+      colsOf[id]=new Set((p.attributes||[]).map(a=>a.name));
+      (seenTable[p.name]=seenTable[p.name]||[]).push(id);
+    });
+  });
+  (model.domains||[]).forEach(d=>{
+    const prods=d.products||[];
+    if(!prods.length) issues.push({sev:'warn',kind:'domain',target:d.name,
+      title:'“'+d.name+'” has no entities',
+      body:'An empty domain will produce an empty schema. Add an entity or remove the domain.'});
+    if(!snake.test(d.name)) issues.push({sev:'info',kind:'domain',target:d.name,
+      title:'“'+d.name+'” is not snake_case',
+      body:'The model’s naming convention is snake_case; this name will be carried into the catalog as-is.'});
+    prods.forEach(p=>{
+      const id=baseKey(d.name,p.name);
+      const attrs=p.attributes||[];
+      if(!attrs.length) issues.push({sev:'error',kind:'entity',target:id,
+        title:p.name+' has no attributes',
+        body:'An entity with no columns cannot be deployed.'});
+      const pk=(p.primary_key||'').trim();
+      if(!pk) issues.push({sev:'warn',kind:'entity',target:id,
+        title:p.name+' has no primary key',
+        body:'Nothing can reference this entity until one of its columns is the key.'});
+      else if(!colsOf[id].has(pk)) issues.push({sev:'error',kind:'entity',target:id,
+        title:p.name+'’s primary key is missing',
+        body:'The key is set to “'+pk+'”, which is not one of its columns.'});
+      if(!snake.test(p.name)) issues.push({sev:'info',kind:'entity',target:id,
+        title:p.name+' is not snake_case',
+        body:'The model’s naming convention is snake_case.'});
+      const dupes={};
+      attrs.forEach(a=>{dupes[a.name]=(dupes[a.name]||0)+1;});
+      Object.keys(dupes).forEach(n=>{ if(dupes[n]>1) issues.push({sev:'error',kind:'entity',target:id,
+        title:'Duplicate column “'+n+'” in '+p.name,
+        body:'The column appears '+dupes[n]+' times. Deployment will fail on the second one.'}); });
+      attrs.forEach(a=>{
+        if(!a.name) issues.push({sev:'error',kind:'entity',target:id,
+          title:'Unnamed column in '+p.name,body:'A column with no name cannot be deployed.'});
+        if(a.name&&!a.type) issues.push({sev:'warn',kind:'entity',target:id,
+          title:'“'+a.name+'” in '+p.name+' has no type',
+          body:'Give it a type, or it will land in the catalog as an untyped string.'});
+        const fk=(a.foreign_key_to||'').trim();
+        if(!fk) return;
+        const parts=fk.split('.');
+        const tgt=parts.slice(0,2).join('.');
+        if(parts.length<2||!colsOf[tgt]) issues.push({sev:'error',kind:'entity',target:id,
+          title:'Broken relationship on '+p.name+'.'+a.name,
+          body:'It points at “'+fk+'”, which is no longer in the model. Re-point it or clear it.'});
+        else if(parts[2]&&!colsOf[tgt].has(parts[2])) issues.push({sev:'warn',kind:'entity',target:id,
+          title:'Relationship column missing on '+p.name+'.'+a.name,
+          body:'“'+tgt+'” exists but has no column “'+parts[2]+'”.'});
+      });
+    });
+  });
+  Object.keys(seenTable).forEach(n=>{
+    if(seenTable[n].length>1) issues.push({sev:'info',kind:'entity',target:seenTable[n][0],
+      title:'“'+n+'” is used in '+seenTable[n].length+' domains',
+      body:seenTable[n].join(', ')+'. Legal, but two tables with one name confuse a glossary.'});
+  });
+  const rank={error:0,warn:1,info:2};
+  return issues.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+}
+
+/* ── Exports ───────────────────────────────────────────────
+   The JSON round-trips: it goes back out in the wrapper it arrived in, so
+   the installer and the agent can read what the workshop produced. */
+function downloadText(filename,text,mime){
+  try{
+    const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }catch(e){ alert('Could not start the download: '+e.message); }
+}
+function exportModelJson(wrapper,model,edits,label){
+  const stamp=new Date().toISOString();
+  const body=wrapper&&wrapper.model
+    ? {...wrapper,model,
+       _design_session:{edited_at:stamp,edited_in:'Model Viewer design mode',
+                        changes:buildChangeMap(wrapper.model,edits).counts,
+                        note:(edits&&edits.note)||''}}
+    : model;
+  downloadText(safeName(label)+'_edited.json',JSON.stringify(body,null,2),'application/json');
+}
+function safeName(s){return String(s||'model').replace(/[^\w.-]+/g,'_').replace(/^_+|_+$/g,'')||'model';}
+function sqlType(t){return (t||'STRING').trim()||'STRING';}
+function exportDDL(model,label,catalog){
+  const cat=catalog||safeName(label).toLowerCase();
+  const out=['-- '+(model.name||label)+' — generated from Model Viewer design mode',
+             '-- '+new Date().toISOString(),''];
+  (model.domains||[]).forEach(d=>{
+    out.push('-- ══ '+d.name.toUpperCase()+' ══');
+    out.push('CREATE SCHEMA IF NOT EXISTS `'+cat+'`.`'+(d.database_name||d.name)+'`;','');
+    (d.products||[]).forEach(p=>{
+      const tbl='`'+cat+'`.`'+(d.database_name||d.name)+'`.`'+(p.table_name||p.name)+'`';
+      out.push('CREATE TABLE IF NOT EXISTS '+tbl+' (');
+      const cols=(p.attributes||[]).map(a=>{
+        const c='  `'+a.name+'` '+sqlType(a.type);
+        const cm=(a.description||'').replace(/'/g,"''").slice(0,900);
+        return c+(cm?" COMMENT '"+cm+"'":'');
+      });
+      if(p.primary_key) cols.push('  CONSTRAINT `pk_'+(p.table_name||p.name)+'` PRIMARY KEY (`'+p.primary_key+'`)');
+      out.push(cols.join(',\n'));
+      const cmt=(p.description||'').replace(/'/g,"''").slice(0,900);
+      out.push(')'+(cmt?"\nCOMMENT '"+cmt+"'":'')+';','');
+    });
+  });
+  out.push('-- ══ RELATIONSHIPS ══');
+  (model.domains||[]).forEach(d=>{
+    (d.products||[]).forEach(p=>{
+      (p.attributes||[]).forEach(a=>{
+        const fk=(a.foreign_key_to||'').trim();
+        if(!fk) return;
+        const parts=fk.split('.');
+        if(parts.length<2) return;
+        const tgtDom=(model.domains||[]).find(x=>x.name===parts[0]);
+        if(!tgtDom) return;
+        const tgtProd=(tgtDom.products||[]).find(x=>x.name===parts[1]);
+        if(!tgtProd) return;
+        out.push('ALTER TABLE `'+cat+'`.`'+(d.database_name||d.name)+'`.`'+(p.table_name||p.name)+'` '+
+          'ADD CONSTRAINT `fk_'+(p.table_name||p.name)+'_'+a.name+'` FOREIGN KEY (`'+a.name+'`) '+
+          'REFERENCES `'+cat+'`.`'+(tgtDom.database_name||tgtDom.name)+'`.`'+(tgtProd.table_name||tgtProd.name)+
+          '` (`'+(parts[2]||tgtProd.primary_key||'id')+'`);');
+      });
+    });
+  });
+  downloadText(safeName(label)+'.sql',out.join('\n'),'text/plain;charset=utf-8');
+}
+function exportDBML(model,label){
+  const out=['// '+(model.name||label)+' — generated from Model Viewer design mode',''];
+  const refs=[];
+  (model.domains||[]).forEach(d=>{
+    (d.products||[]).forEach(p=>{
+      out.push('Table '+d.name+'.'+p.name+' {');
+      (p.attributes||[]).forEach(a=>{
+        const notes=[];
+        if(a.name===p.primary_key) notes.push('pk');
+        const nt=(a.description||'').replace(/["\n]/g,' ').slice(0,120);
+        if(nt) notes.push('note: "'+nt+'"');
+        out.push('  '+a.name+' '+(a.type||'string').replace(/[ ,]/g,'')+
+          (notes.length?' ['+notes.join(', ')+']':''));
+        const fk=(a.foreign_key_to||'').trim();
+        if(fk){
+          const parts=fk.split('.');
+          if(parts.length>=2) refs.push('Ref: '+d.name+'.'+p.name+'.'+a.name+' > '+
+            parts[0]+'.'+parts[1]+'.'+(parts[2]||'id'));
+        }
+      });
+      const note=(p.description||'').replace(/["\n']/g,' ').slice(0,300);
+      if(note) out.push("  Note: '"+note+"'");
+      out.push('}','');
+    });
+  });
+  out.push('',...refs);
+  downloadText(safeName(label)+'.dbml.txt',out.join('\n'),'text/plain;charset=utf-8');
+}
+function csvCell(v){const s=String(v==null?'':v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function exportDictionary(model,label){
+  const rows=[['domain','entity','entity_type','subdomain','column','data_type','primary_key',
+               'foreign_key_to','business_term','description','tags']];
+  (model.domains||[]).forEach(d=>(d.products||[]).forEach(p=>(p.attributes||[]).forEach(a=>{
+    rows.push([d.name,p.name,p.type||'',p.subdomain||'',a.name,a.type||'',
+      a.name===p.primary_key?'Y':'',a.foreign_key_to||'',a.business_glossary_term||'',
+      a.description||'',Array.isArray(a.tags)?a.tags.join(' '):(a.tags||'')]);
+  })));
+  downloadText(safeName(label)+'_dictionary.csv',
+    rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv;charset=utf-8');
+}
+function exportChangeReport(base,model,edits,label){
+  const cm=buildChangeMap(base,edits);
+  const L=['# Model changes — '+(model.name||label),'',
+    'Baseline: the industry model as shipped. Generated '+new Date().toISOString().slice(0,16).replace('T',' ')+'.','',
+    '| | count |','|---|---|',
+    '| Entities added | '+cm.counts.added+' |',
+    '| Entities changed | '+cm.counts.modified+' |',
+    '| Entities removed | '+cm.counts.removed+' |',
+    '| Domains touched | '+cm.counts.domains+' |',''];
+  if((edits.note||'').trim()) L.push('## Workshop note','',edits.note.trim(),'');
+  const idx=baseIndex(base);
+  const dstate=cm.domState||{};
+  if(Object.keys(dstate).length){
+    L.push('## Domains','');
+    Object.keys(dstate).sort().forEach(n=>{
+      const ov=(edits.domains||{})[n];
+      const now=ov&&ov.data&&ov.data.name;
+      L.push('- **'+n+'** — '+dstate[n]+(now&&now!==n?' · now `'+now+'`':''));
+    });
+    L.push('');
+  }
+  const groups={added:[],modified:[],removed:[]};
+  Object.keys(cm.byKey).forEach(k=>{const c=cm.byKey[k];groups[c.state].push({k,c});});
+  const heads={added:'Entities added',modified:'Entities changed',removed:'Entities removed'};
+  ['added','modified','removed'].forEach(state=>{
+    const list=groups[state];
+    if(!list.length) return;
+    L.push('## '+heads[state],'');
+    list.sort((a,b)=>(a.c.to||a.c.from).localeCompare(b.c.to||b.c.from)).forEach(({k,c})=>{
+      if(state==='removed'){L.push('- `'+c.from+'`');return;}
+      if(state==='added'){
+        const ov=edits.products[k];
+        const nc=(ov.data.attributes||[]).length;
+        L.push('- `'+c.to+'` — '+nc+' column'+(nc===1?'':'s')+
+          (ov.data.description?' · '+ov.data.description.slice(0,140):''));
+        return;
+      }
+      const before=(idx.products[k]||{}).product||{};
+      const after=(edits.products[k]||{}).data||{};
+      const bits=[];
+      if(c.renamed) bits.push('renamed from `'+c.from+'`');
+      const ba=(before.attributes||[]).map(a=>a.name), aa=(after.attributes||[]).map(a=>a.name);
+      const gone=ba.filter(n=>aa.indexOf(n)<0), nu=aa.filter(n=>ba.indexOf(n)<0);
+      if(nu.length) bits.push('+'+nu.length+' column'+(nu.length===1?'':'s')+' ('+nu.slice(0,8).join(', ')+(nu.length>8?'…':'')+')');
+      if(gone.length) bits.push('−'+gone.length+' column'+(gone.length===1?'':'s')+' ('+gone.slice(0,8).join(', ')+(gone.length>8?'…':'')+')');
+      if((before.description||'')!==(after.description||'')) bits.push('description rewritten');
+      if((before.primary_key||'')!==(after.primary_key||'')) bits.push('primary key → `'+after.primary_key+'`');
+      if((before.subdomain||'')!==(after.subdomain||'')) bits.push('subdomain → '+(after.subdomain||'—'));
+      const note=(after.data_modeler_notes||'').trim();
+      L.push('- `'+c.to+'`'+(bits.length?' — '+bits.join('; '):' — edited'));
+      if(note) L.push('  - note: '+note.replace(/\n+/g,' '));
+    });
+    L.push('');
+  });
+  downloadText(safeName(label)+'_changes.md',L.join('\n'),'text/markdown;charset=utf-8');
+}
+
+/* Free-text columns pasted out of whatever the room brought with them — a
+   CREATE TABLE, a spreadsheet column, the text of an ARIS screenshot someone
+   retyped. Anything it cannot read it drops rather than guessing. */
+function parsePastedColumns(text){
+  const out=[];
+  String(text||'').split(/\r?\n/).forEach(raw=>{
+    let line=raw.trim().replace(/,$/,'');
+    if(!line) return;
+    if(/^(create|--|\/\/|#|\)|\(|primary key|foreign key|constraint|using|comment|partitioned|tblproperties)/i.test(line)) return;
+    line=line.replace(/^[`"[]|[`"\]]$/g,'');
+    let name='',type='',desc='';
+    // A comma inside DECIMAL(18,2) or MAP<a,b> is part of the type, not a cell
+    // boundary, so the split only fires at bracket depth zero.
+    const cells=[]; let cell='', depth=0;
+    for(const ch of line){
+      if('(<['.includes(ch)) depth++;
+      else if(')>]'.includes(ch)) depth=Math.max(0,depth-1);
+      if(depth===0&&',;\t|'.includes(ch)){cells.push(cell);cell='';continue;}
+      cell+=ch;
+    }
+    cells.push(cell);
+    if(cells.length>1){
+      const c=cells.map(x=>x.trim());
+      name=c[0]; type=c[1]||''; desc=c.slice(2).filter(Boolean).join(' ');
+    }else{
+      const parts=line.split(/\s+/);
+      name=parts[0]; type=parts[1]||''; desc=parts.slice(2).join(' ');
+    }
+    name=(name||'').replace(/[`"'[\]]/g,'').trim();
+    if(!name||/\s/.test(name)) return;
+    type=(type||'').replace(/[`"']/g,'').replace(/,$/,'').trim();
+    if(type&&!/^[A-Za-z][\w<>(),. ]*$/.test(type)){desc=(type+' '+desc).trim();type='';}
+    out.push({name:name.toLowerCase(),type:(type||'STRING').toUpperCase(),desc:desc.trim()});
+  });
+  return out;
+}
+
+/* A blank entity carries the model's own conventions rather than a generic
+   `id`: a new table should look like it belongs to the model it joins. */
+function blankProduct(name,conv){
+  const suffix=(conv&&conv.primary_key_suffix)||'_id';
+  const idType=(conv&&conv.table_id_type)||'BIGINT';
+  const pk=name+suffix;
+  return {name,table_name:name,primary_key:pk,subdomain:'',
+    description:'',type:'Master',division:'',function:'',data_type:'master_data',
+    source_domains:'',association_edges:'',reference:'',tags:'',
+    attributes:[{name:pk,column_name:pk,type:idType,business_glossary_term:'',
+      description:'Unique identifier. Primary key.',value_regex:'',tags:'primary_key',
+      foreign_key_to:'',references:''}]};
+}
+function blankDomain(name){
+  return {name,division:'operations',description:'',database_name:name,
+          references:'',tags:'',products:[]};
+}
+/* The editor works on rows with a stable id so a rename can be told apart
+   from a delete-and-add; the id never reaches the model. */
+function toRows(attrs){
+  return (attrs||[]).map(a=>({_id:newAid(),_from:a.name,name:a.name||'',type:a.type||'',
+    description:a.description||'',foreign_key_to:a.foreign_key_to||'',
+    business_glossary_term:a.business_glossary_term||'',
+    tags:Array.isArray(a.tags)?a.tags.join(', '):(a.tags||''),
+    value_regex:a.value_regex||'',references:a.references||''}));
+}
+function fromRows(rows){
+  return rows.filter(r=>(r.name||'').trim()).map(r=>({
+    name:r.name.trim(),column_name:r.name.trim(),type:(r.type||'STRING').trim(),
+    business_glossary_term:r.business_glossary_term||'',description:r.description||'',
+    value_regex:r.value_regex||'',tags:r.tags||'',
+    foreign_key_to:(r.foreign_key_to||'').trim(),references:r.references||''}));
+}
+function rowRenames(rows){
+  const ren={};
+  rows.forEach(r=>{ if(r._from&&r.name&&r._from!==r.name.trim()) ren[r._from]=r.name.trim(); });
+  return ren;
+}
+/* Every entity in the model, flattened once, for the pickers. */
+function entityList(model){
+  const out=[];
+  (model&&model.domains||[]).forEach(d=>(d.products||[]).forEach(p=>{
+    out.push({id:baseKey(d.name,p.name),domain:d.name,name:p.name,
+      pk:p.primary_key||'',count:(p.attributes||[]).length,desc:p.description||''});
+  }));
+  return out;
+}
+
+/* ── Dialog shell ──────────────────────────────────────────
+   One shell for every editor, so Escape, the scrim click and the focus trap
+   are written once. */
+function Dlg({title,sub,icon,size,onClose,foot,children,wide}){
+  useEffect(()=>{
+    const onKey=e=>{ if(e.key==='Escape'){e.stopPropagation();onClose();} };
+    window.addEventListener('keydown',onKey,true);
+    return ()=>window.removeEventListener('keydown',onKey,true);
+  },[onClose]);
+  return h('div',{className:'dlg-scrim',onMouseDown:e=>{if(e.target===e.currentTarget)onClose();}},
+    h('div',{className:'dlg'+(size?' '+size:''),role:'dialog','aria-modal':'true','aria-label':title,
+             onMouseDown:e=>e.stopPropagation()},
+      h('div',{className:'dlg-head'},
+        icon&&h('span',{style:{fontSize:15}},icon),
+        h('div',{style:{minWidth:0}},
+          h('h3',null,title),
+          sub&&h('div',{className:'sub'},sub)),
+        h('button',{className:'dlg-x',onClick:onClose,title:'Close (Esc)','aria-label':'Close'},'✕')
+      ),
+      h('div',{className:'dlg-body'},children),
+      foot&&h('div',{className:'dlg-foot'},foot)
+    )
+  );
+}
+function Fld({label,hint,style,children}){
+  return h('div',{className:'fld',style},
+    label&&h('label',null,label),
+    children,
+    hint&&h('div',{className:'hint'},hint));
+}
+
+/* ── Entity picker ─────────────────────────────────────────
+   Used wherever a relationship needs a target. 262 entities do not browse
+   by scrolling, so it is a search box first and a list second. */
+function EntityPicker({model,graphData,title,note,onPick,onClose,exclude}){
+  const [q,setQ]=useState('');
+  const [cursor,setCursor]=useState(0);
+  const inputRef=useRef(null);
+  useEffect(()=>{inputRef.current&&inputRef.current.focus();},[]);
+  const all=useMemo(()=>entityList(model),[model]);
+  const list=useMemo(()=>{
+    const s=q.trim().toLowerCase();
+    const pool=all.filter(e=>e.id!==exclude);
+    if(!s) return pool.slice(0,300);
+    return pool.filter(e=>e.id.toLowerCase().includes(s)||
+      (e.desc||'').toLowerCase().includes(s)).slice(0,300);
+  },[all,q,exclude]);
+  useEffect(()=>{setCursor(0);},[q]);
+  const colors=(graphData&&graphData.domainColors)||{};
+  const onKey=e=>{
+    if(e.key==='ArrowDown'){e.preventDefault();setCursor(c=>Math.min(list.length-1,c+1));}
+    else if(e.key==='ArrowUp'){e.preventDefault();setCursor(c=>Math.max(0,c-1));}
+    else if(e.key==='Enter'){e.preventDefault();if(list[cursor])onPick(list[cursor]);}
+  };
+  return h(Dlg,{title:title||'Choose an entity',sub:note,icon:'⌕',size:'md',onClose},
+    h('input',{ref:inputRef,type:'search',value:q,placeholder:'Search entities…',
+      onChange:e=>setQ(e.target.value),onKeyDown:onKey,style:{marginBottom:8}}),
+    h('div',{style:{maxHeight:'52vh',overflowY:'auto'}},
+      !list.length&&h('p',{style:{color:'var(--muted)',fontSize:12,padding:'14px 4px'}},
+        'Nothing matches “'+q+'”.'),
+      list.map((e,i)=>h('button',{key:e.id,className:'pick-row'+(i===cursor?' cursor':''),
+          onMouseEnter:()=>setCursor(i),onClick:()=>onPick(e)},
+        h('span',{className:'pick-dom',style:{background:colors[e.domain]||'var(--muted)'}}),
+        h('span',{style:{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+          h('b',{style:{fontWeight:650}},e.name),
+          h('span',{style:{color:'var(--faint)',fontSize:11}},'  '+e.domain)),
+        h('span',{className:'pk'},e.pk||'no key')
+      ))
+    )
+  );
+}
+
+/* ── Paste columns ─────────────────────────────────────────
+   The bridge from the world people arrive with: a CREATE TABLE, a column of
+   a spreadsheet, a list retyped off an ARIS diagram. It parses, shows what it
+   read, and adds nothing until that preview looks right. */
+function PasteColumnsDialog({onAdd,onClose}){
+  const [text,setText]=useState('');
+  const parsed=useMemo(()=>parsePastedColumns(text),[text]);
+  return h(Dlg,{title:'Paste columns',icon:'⎘',size:'md',onClose,
+      sub:'A CREATE TABLE, a CSV, or one column per line',
+      foot:h(React.Fragment,null,
+        h('span',{style:{fontSize:11,color:'var(--muted)'}},
+          parsed.length?parsed.length+' column'+(parsed.length===1?'':'s')+' recognised':'Nothing recognised yet'),
+        h('span',{className:'spacer'}),
+        h('button',{className:'btn',onClick:onClose},'Cancel'),
+        h('button',{className:'btn btn-accent',disabled:!parsed.length,
+          onClick:()=>{onAdd(parsed);onClose();}},'Add '+(parsed.length||'')+' columns'))},
+    h('textarea',{className:'mono',value:text,autoFocus:true,
+      placeholder:'customer_id  BIGINT  Unique customer key\ncustomer_name  STRING\nsigned_on  DATE',
+      onChange:e=>setText(e.target.value),style:{minHeight:150,marginBottom:10}}),
+    parsed.length>0&&h('div',{style:{border:'1px solid var(--line)',borderRadius:8,
+        maxHeight:'26vh',overflowY:'auto'}},
+      parsed.map((p,i)=>h('div',{key:i,style:{display:'grid',
+          gridTemplateColumns:'minmax(0,1fr) 120px minmax(0,1.4fr)',gap:8,padding:'5px 9px',
+          borderBottom:'1px solid var(--veil)',fontSize:11}},
+        h('span',{style:{fontFamily:'ui-monospace,monospace',color:'var(--ink)'}},p.name),
+        h('span',{style:{color:'var(--g-amber-line)',fontFamily:'ui-monospace,monospace'}},p.type),
+        h('span',{style:{color:'var(--muted)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.desc)
+      ))
+    )
+  );
+}
+
+/* ── Entity editor ─────────────────────────────────────────
+   The one screen a modeller lives in during a workshop: the entity's
+   business identity above, its columns below in a grid that behaves like the
+   spreadsheet everyone in the room already knows. It edits a WORKING COPY —
+   nothing reaches the model until Save, so a conversation that goes nowhere
+   costs nothing. */
+function EntityEditor({model,graphData,conv,entry,changeState,onSave,onDelete,onRevert,onClose}){
+  const base=entry.product;
+  const [name,setName]=useState(base.name||'');
+  const [domain,setDomain]=useState(entry.domain);
+  const [subdomain,setSubdomain]=useState(base.subdomain||'');
+  const [ptype,setPtype]=useState(base.type||'Master');
+  const [dataType,setDataType]=useState(base.data_type||'');
+  const [desc,setDesc]=useState(base.description||'');
+  const [tags,setTags]=useState(Array.isArray(base.tags)?base.tags.join(', '):(base.tags||''));
+  const [reference,setReference]=useState(base.reference||'');
+  const [note,setNote]=useState(base.data_modeler_notes||'');
+  const [pk,setPk]=useState(base.primary_key||'');
+  const [rows,setRows]=useState(()=>toRows(base.attributes));
+  const [filter,setFilter]=useState('');
+  const [pickFor,setPickFor]=useState(null);   // row id awaiting an FK target
+  const [pasting,setPasting]=useState(false);
+  const [showMeta,setShowMeta]=useState(false);
+  const bodyRef=useRef(null);
+
+  const domains=useMemo(()=>(model.domains||[]).map(d=>d.name),[model]);
+  const subs=useMemo(()=>{
+    const d=(model.domains||[]).find(x=>x.name===domain);
+    const set=new Set((d&&d.products||[]).map(p=>p.subdomain).filter(Boolean));
+    return [...set].sort();
+  },[model,domain]);
+
+  const setRow=(id,patch)=>setRows(rs=>rs.map(r=>r._id===id?{...r,...patch}:r));
+  const move=(id,dir)=>setRows(rs=>{
+    const i=rs.findIndex(r=>r._id===id), j=i+dir;
+    if(i<0||j<0||j>=rs.length) return rs;
+    const next=rs.slice(); const t=next[i]; next[i]=next[j]; next[j]=t; return next;
+  });
+  const addRow=()=>{
+    const id=newAid();
+    setRows(rs=>[...rs,{_id:id,_from:'',name:'',type:'STRING',description:'',
+      foreign_key_to:'',business_glossary_term:'',tags:'',value_regex:'',references:''}]);
+    setFilter('');
+    setTimeout(()=>{
+      const el=document.querySelector('[data-row="'+id+'"] input');
+      if(el){el.focus();el.scrollIntoView({block:'nearest'});}
+    },30);
+  };
+  const delRow=id=>setRows(rs=>rs.filter(r=>r._id!==id));
+
+  const shown=useMemo(()=>{
+    const s=filter.trim().toLowerCase();
+    return s?rows.filter(r=>(r.name||'').toLowerCase().includes(s)||
+      (r.description||'').toLowerCase().includes(s)):rows;
+  },[rows,filter]);
+
+  const nameOk=/^\S+$/.test(name.trim());
+  const dupNames=useMemo(()=>{
+    const seen={},dup=new Set();
+    rows.forEach(r=>{const n=(r.name||'').trim();if(!n)return;if(seen[n])dup.add(n);seen[n]=1;});
+    return dup;
+  },[rows]);
+  const clash=useMemo(()=>{
+    const target=baseKey(domain,name.trim());
+    if(target===baseKey(entry.domain,base.name)) return false;
+    return entityList(model).some(e=>e.id===target);
+  },[model,domain,name,entry.domain,base.name]);
+
+  const commit=()=>{
+    if(!nameOk||clash) return;
+    const attrs=fromRows(rows);
+    const product={...base,name:name.trim(),
+      table_name:(base.table_name===base.name||!base.table_name)?name.trim():base.table_name,
+      primary_key:pk,subdomain,type:ptype,data_type:dataType,description:desc,
+      tags,reference,attributes:attrs};
+    if(note.trim()) product.data_modeler_notes=note.trim(); else delete product.data_modeler_notes;
+    onSave({product,domain,ren:rowRenames(rows)});
+  };
+  useEffect(()=>{
+    const onKey=e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();commit();} };
+    window.addEventListener('keydown',onKey);
+    return ()=>window.removeEventListener('keydown',onKey);
+  });
+
+  const pkOfTarget=id=>{const e=entityList(model).find(x=>x.id===id);return e?e.pk:'';};
+  const stateChip=changeState&&h('span',{className:'chip-mini '+
+      (changeState==='added'?'chip-add':'chip-mod')},
+    changeState==='added'?'NEW':'CHANGED');
+
+  return h(React.Fragment,null,
+    h(Dlg,{title:entry.isNew?'New entity':(base.name||'Entity'),
+      icon:'▦',onClose,
+      sub:h('span',null,domain.replace(/_/g,' '),subdomain?' › '+subdomain.replace(/_/g,' '):'',
+        '  ·  ',rows.length+' columns',stateChip?'  ':'' ,stateChip),
+      foot:h(React.Fragment,null,
+        !entry.isNew&&h('button',{className:'btn',style:{color:'var(--danger)'},
+          title:'Take this entity out of the model',
+          onClick:()=>{ if(confirm('Remove “'+base.name+'” from the model?\n\nIt stays in the change list and can be restored at any time.')){onDelete();} }},
+          '✕ Remove entity'),
+        !entry.isNew&&changeState==='modified'&&h('button',{className:'btn',
+          title:'Throw away every change to this entity and take the industry model’s version back',
+          onClick:()=>{ if(confirm('Restore “'+base.name+'” to the industry model’s version?')){onRevert();} }},
+          '↺ Restore original'),
+        h('span',{className:'spacer'}),
+        clash&&h('span',{style:{fontSize:11,color:'var(--danger)'}},'An entity called that is already in '+domain),
+        dupNames.size>0&&h('span',{style:{fontSize:11,color:'var(--danger)'}},
+          'Duplicate column: '+[...dupNames].join(', ')),
+        h('button',{className:'btn',onClick:onClose},'Cancel'),
+        h('button',{className:'btn btn-accent',disabled:!nameOk||clash,onClick:commit},
+          entry.isNew?'Add entity':'Save changes'))},
+
+      h('div',{ref:bodyRef},
+        h('div',{className:'fldrow',style:{gridTemplateColumns:'1.4fr 1fr 1fr 1fr'}},
+          h(Fld,{label:'Entity name',hint:'snake_case — this becomes the table name'},
+            h('input',{type:'text',value:name,autoFocus:true,className:'mono'+(nameOk?'':' req-bad'),
+              onChange:e=>setName(e.target.value.replace(/\s+/g,'_'))})),
+          h(Fld,{label:'Domain'},
+            h('select',{value:domain,onChange:e=>setDomain(e.target.value)},
+              domains.map(d=>h('option',{key:d,value:d},d)))),
+          h(Fld,{label:'Subdomain',hint:'groups entities inside the domain'},
+            h('input',{type:'text',value:subdomain,list:'mv-subs',
+              onChange:e=>setSubdomain(e.target.value)}),
+            h('datalist',{id:'mv-subs'},subs.map(s=>h('option',{key:s,value:s})))),
+          h(Fld,{label:'Entity type'},
+            h('select',{value:ptype,onChange:e=>setPtype(e.target.value)},
+              [...new Set([ptype,...PRODUCT_TYPES].filter(Boolean))].map(t=>h('option',{key:t,value:t},t))))
+        ),
+        h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr'}},
+          h(Fld,{label:'What this entity is',hint:'Written for the business, not for the warehouse — this is what the room reads back'},
+            h('textarea',{value:desc,onChange:e=>setDesc(e.target.value),
+              style:{minHeight:74},placeholder:'The authoritative record for…'}))
+        ),
+        h('div',{style:{marginBottom:11}},
+          h('button',{className:'tbtn',onClick:()=>setShowMeta(m=>!m)},
+            (showMeta?'▾':'▸')+' Workshop notes, tags and provenance'),
+          showMeta&&h('div',{style:{marginTop:9}},
+            h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr'}},
+              h(Fld,{label:'Workshop note',hint:'Why this entity looks the way it does — decisions, owners, open questions'},
+                h('textarea',{value:note,onChange:e=>setNote(e.target.value),
+                  placeholder:'Agreed with Finance 3 Sep: one row per contract, not per invoice line.'}))),
+            h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr 1fr 1fr'}},
+              h(Fld,{label:'Tags'},h('input',{type:'text',value:tags,
+                onChange:e=>setTags(e.target.value),placeholder:'pii, gold'})),
+              h(Fld,{label:'Data type'},h('input',{type:'text',value:dataType,list:'mv-dtypes',
+                onChange:e=>setDataType(e.target.value)}),
+                h('datalist',{id:'mv-dtypes'},DATA_TYPES.map(t=>h('option',{key:t,value:t})))),
+              h(Fld,{label:'Reference'},h('input',{type:'text',value:reference,
+                onChange:e=>setReference(e.target.value),placeholder:'OAGIS 10.9 · ARIS LDM'}))))
+        ),
+
+        h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:7}},
+          h('span',{className:'section-header',style:{margin:0}},'Columns'),
+          h('span',{style:{fontSize:10,color:'var(--faint)'}},
+            rows.length+' total'+(filter?' · '+shown.length+' shown':'')),
+          h('span',{style:{flex:1}}),
+          h('input',{type:'search',value:filter,placeholder:'Filter columns…',
+            onChange:e=>setFilter(e.target.value),style:{width:170,padding:'5px 8px',fontSize:11}}),
+          h('button',{className:'tbtn',onClick:()=>setPasting(true),
+            title:'Paste a CREATE TABLE, a CSV or a plain list'},'⎘ Paste'),
+          h('button',{className:'tbtn',onClick:addRow},'+ Column')
+        ),
+        h('datalist',{id:'mv-types'},COMMON_TYPES.map(t=>h('option',{key:t,value:t}))),
+        h('div',{className:'colgrid'},
+          h('div',{className:'colgrid-head'},
+            h('div',null,'#'),h('div',null,'Column'),h('div',null,'Type'),
+            h('div',{title:'Primary key'},'PK'),h('div',null,'References'),
+            h('div',null,'Description'),h('div',null,'')),
+          h('div',{className:'colgrid-body'},
+            !shown.length&&h('div',{style:{padding:'22px 12px',textAlign:'center',
+              color:'var(--muted)',fontSize:12}},
+              rows.length?'No column matches that filter.':'No columns yet — add one, or paste a list.'),
+            shown.map(r=>{
+              const i=rows.indexOf(r);
+              const isPk=pk&&r.name===pk;
+              const fk=(r.foreign_key_to||'').trim();
+              return h('div',{key:r._id,'data-row':r._id,
+                  className:'colgrid-row'+(isPk?' is-pk':'')},
+                h('div',{className:'idx'},i+1),
+                h('div',null,h('input',{type:'text',className:'mono'+(dupNames.has(r.name)?' req-bad':''),
+                  value:r.name,placeholder:'column_name',
+                  onChange:e=>{
+                    const nu=e.target.value.replace(/\s+/g,'_');
+                    if(isPk) setPk(nu);
+                    setRow(r._id,{name:nu});
+                  }})),
+                h('div',null,h('input',{type:'text',className:'mono',value:r.type,list:'mv-types',
+                  placeholder:'STRING',onChange:e=>setRow(r._id,{type:e.target.value})})),
+                h('div',{style:{textAlign:'center'}},
+                  h('input',{type:'checkbox',checked:!!isPk,
+                    title:isPk?'This is the primary key':'Make this the primary key',
+                    onChange:()=>setPk(isPk?'':r.name)})),
+                h('div',null,h('div',{className:'fk-cell'},
+                  h('button',{className:'fk-btn'+(fk?'':' empty'),
+                    title:fk?'Points at '+fk+' — click to re-point':'Point this column at another entity',
+                    onClick:()=>setPickFor(r._id)},fk||'—'),
+                  fk&&h('button',{className:'rowbtn',title:'Clear the relationship',
+                    onClick:()=>setRow(r._id,{foreign_key_to:''})},'✕'))),
+                h('div',null,h('input',{type:'text',value:r.description,placeholder:'What it holds',
+                  onChange:e=>setRow(r._id,{description:e.target.value})})),
+                h('div',{className:'rowbtns'},
+                  h('button',{className:'rowbtn',title:'Move up',disabled:!!filter||i===0,
+                    onClick:()=>move(r._id,-1)},'↑'),
+                  h('button',{className:'rowbtn',title:'Move down',disabled:!!filter||i===rows.length-1,
+                    onClick:()=>move(r._id,1)},'↓'),
+                  h('button',{className:'rowbtn danger',title:'Delete this column',
+                    onClick:()=>delRow(r._id)},'✕'))
+              );
+            })
+          )
+        )
+      )
+    ),
+    pickFor&&h(EntityPicker,{model,graphData,title:'Point the column at…',
+      note:'The column becomes a foreign key to that entity’s primary key',
+      exclude:baseKey(domain,name),
+      onClose:()=>setPickFor(null),
+      onPick:e=>{
+        const target=e.pk?e.id+'.'+e.pk:e.id;
+        setRow(pickFor,{foreign_key_to:target,
+          type:rows.find(r=>r._id===pickFor).type||'BIGINT'});
+        setPickFor(null);
+      }}),
+    pasting&&h(PasteColumnsDialog,{onClose:()=>setPasting(false),
+      onAdd:cols=>setRows(rs=>[...rs,...cols.map(c=>({_id:newAid(),_from:'',name:c.name,
+        type:c.type,description:c.desc,foreign_key_to:'',business_glossary_term:'',
+        tags:'',value_regex:'',references:''}))])})
+  );
+}
+
+/* ── Domain editor ─────────────────────────────────────────
+   A domain is a business capability before it is a schema, so this is mostly
+   words. Its entity list is here because moving one entity to another domain
+   is the single most common thing a workshop does to a domain. */
+function DomainEditor({model,entry,changeState,onSave,onDelete,onRevert,onClose,onOpenEntity}){
+  const base=entry.domain;
+  const [name,setName]=useState(base.name||'');
+  const [division,setDivision]=useState(base.division||'');
+  const [desc,setDesc]=useState(base.description||'');
+  const [dbName,setDbName]=useState(base.database_name||base.name||'');
+  const [references,setReferences]=useState(base.references||'');
+  const [tags,setTags]=useState(Array.isArray(base.tags)?base.tags.join(', '):(base.tags||''));
+  const prods=base.products||[];
+  const nameOk=/^\S+$/.test(name.trim());
+  const clash=useMemo(()=>name.trim()!==base.name&&
+    (model.domains||[]).some(d=>d.name===name.trim()),[model,name,base.name]);
+  const commit=()=>{
+    if(!nameOk||clash) return;
+    onSave({name:name.trim(),division,description:desc,
+      database_name:dbName.trim()||name.trim(),references,tags});
+  };
+  return h(Dlg,{title:entry.isNew?'New domain':(base.name||'Domain'),icon:'◰',size:'md',onClose,
+    sub:entry.isNew?'A business capability of the organisation'
+      :prods.length+' entities'+(changeState?' · '+changeState:''),
+    foot:h(React.Fragment,null,
+      !entry.isNew&&h('button',{className:'btn',style:{color:'var(--danger)'},
+        onClick:()=>{ if(confirm('Remove the domain “'+base.name+'” and its '+prods.length+
+          ' entities from the model?\n\nIt stays in the change list and can be restored.')) onDelete(); }},
+        '✕ Remove domain'),
+      !entry.isNew&&changeState&&h('button',{className:'btn',
+        onClick:()=>{if(confirm('Restore “'+base.name+'” to the industry model’s version?'))onRevert();}},
+        '↺ Restore original'),
+      h('span',{className:'spacer'}),
+      clash&&h('span',{style:{fontSize:11,color:'var(--danger)'}},'That domain name is taken'),
+      h('button',{className:'btn',onClick:onClose},'Cancel'),
+      h('button',{className:'btn btn-accent',disabled:!nameOk||clash,onClick:commit},
+        entry.isNew?'Add domain':'Save changes'))},
+    h('div',{className:'fldrow',style:{gridTemplateColumns:'1.3fr 1fr 1fr'}},
+      h(Fld,{label:'Domain name',hint:'snake_case — becomes the schema'},
+        h('input',{type:'text',className:'mono'+(nameOk?'':' req-bad'),value:name,autoFocus:true,
+          onChange:e=>{const v=e.target.value.replace(/\s+/g,'_');
+            if(dbName===name)setDbName(v); setName(v);}})),
+      h(Fld,{label:'Division'},
+        h('select',{value:division,onChange:e=>setDivision(e.target.value)},
+          h('option',{value:''},'—'),
+          [...new Set([division,...DIVISIONS].filter(Boolean))].map(d=>h('option',{key:d,value:d},d)))),
+      h(Fld,{label:'Schema name'},
+        h('input',{type:'text',className:'mono',value:dbName,onChange:e=>setDbName(e.target.value)}))),
+    h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr'}},
+      h(Fld,{label:'What this domain covers'},
+        h('textarea',{value:desc,onChange:e=>setDesc(e.target.value),
+          placeholder:'Everything the business does around…'}))),
+    h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr 1fr'}},
+      h(Fld,{label:'Standards it follows'},h('input',{type:'text',value:references,
+        onChange:e=>setReferences(e.target.value),placeholder:'OAGIS · ISO 20022'})),
+      h(Fld,{label:'Tags'},h('input',{type:'text',value:tags,onChange:e=>setTags(e.target.value)}))),
+    !entry.isNew&&prods.length>0&&h('div',null,
+      h('div',{className:'section-header'},'Entities'),
+      h('div',{style:{maxHeight:'26vh',overflowY:'auto',border:'1px solid var(--line)',
+                      borderRadius:8,padding:5}},
+        prods.map(p=>h('button',{key:p.name,className:'pick-row',
+            onClick:()=>{onOpenEntity(baseKey(base.name,p.name));},
+            title:'Open '+p.name},
+          h('span',{style:{fontFamily:'ui-monospace,monospace',fontSize:11.5}},p.name),
+          h('span',{className:'pk'},(p.attributes||[]).length+' cols')))))
+  );
+}
+
+/* ── New relationship ──────────────────────────────────────
+   In the model a relationship IS a column, so this dialog writes one: it adds
+   the foreign key column to the child, defaulting its name and type from the
+   parent's key so the common case is three clicks. */
+function RelationshipDialog({model,graphData,initial,onSave,onClose}){
+  const [child,setChild]=useState((initial&&initial.child)||null);
+  const [parent,setParent]=useState((initial&&initial.parent)||null);
+  const [col,setCol]=useState('');
+  const [desc,setDesc]=useState('');
+  const [picking,setPicking]=useState(null);
+  const [touched,setTouched]=useState(false);
+  const list=useMemo(()=>entityList(model),[model]);
+  const find=id=>list.find(e=>e.id===id);
+  const pe=parent?find(parent):null, ce=child?find(child):null;
+  useEffect(()=>{
+    if(!touched&&pe) setCol(pe.pk||pe.name+'_id');
+  },[pe,touched]);
+  const childProduct=useMemo(()=>{
+    if(!child) return null;
+    const [dn,pn]=child.split('.');
+    const d=(model.domains||[]).find(x=>x.name===dn);
+    return d&&(d.products||[]).find(x=>x.name===pn);
+  },[model,child]);
+  const exists=childProduct&&(childProduct.attributes||[]).some(a=>a.name===col.trim());
+  const pkType=useMemo(()=>{
+    if(!pe) return 'BIGINT';
+    const [dn,pn]=pe.id.split('.');
+    const d=(model.domains||[]).find(x=>x.name===dn);
+    const p=d&&(d.products||[]).find(x=>x.name===pn);
+    const a=p&&(p.attributes||[]).find(x=>x.name===pe.pk);
+    return (a&&a.type)||'BIGINT';
+  },[model,pe]);
+  const ready=child&&parent&&col.trim()&&!exists;
+  const slot=(label,value,which,hint)=>h(Fld,{label,hint},
+    h('button',{className:'btn',style:{width:'100%',textAlign:'left',
+        color:value?'var(--ink)':'var(--faint)'},
+      onClick:()=>setPicking(which)},
+      value?value.replace('.',' › '):'Choose an entity…'));
+  return h(React.Fragment,null,
+    h(Dlg,{title:'New relationship',icon:'⇄',size:'md',onClose,
+      sub:'A relationship is a foreign key column on the child entity',
+      foot:h(React.Fragment,null,
+        exists&&h('span',{style:{fontSize:11,color:'var(--danger)'}},
+          '“'+col+'” already exists on '+(ce&&ce.name)),
+        h('span',{className:'spacer'}),
+        h('button',{className:'btn',onClick:onClose},'Cancel'),
+        h('button',{className:'btn btn-accent',disabled:!ready,
+          onClick:()=>onSave({child,parent,column:col.trim(),type:pkType,
+            description:desc||('Reference to '+(pe?pe.id:'')+'.')})},'Add relationship'))},
+      h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr 28px 1fr',alignItems:'end'}},
+        slot('Child — holds the key',child,'child','many'),
+        h('div',{style:{textAlign:'center',color:'var(--muted)',fontSize:16,paddingBottom:7}},'→'),
+        slot('Parent — is referenced',parent,'parent','one')),
+      h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr 1fr'}},
+        h(Fld,{label:'Column added to the child',hint:'Defaults to the parent’s key'},
+          h('input',{type:'text',className:'mono'+(exists?' req-bad':''),value:col,
+            onChange:e=>{setTouched(true);setCol(e.target.value.replace(/\s+/g,'_'));}})),
+        h(Fld,{label:'Type',hint:'Taken from the parent’s key'},
+          h('input',{type:'text',className:'mono',value:pkType,readOnly:true,
+            style:{color:'var(--muted)'}}))),
+      h('div',{className:'fldrow',style:{gridTemplateColumns:'1fr'}},
+        h(Fld,{label:'Why they relate',hint:'The sentence a stakeholder would say out loud'},
+          h('input',{type:'text',value:desc,onChange:e=>setDesc(e.target.value),
+            placeholder:pe&&ce?('Every '+ce.name+' belongs to one '+pe.name+'.'):'…'}))),
+      pe&&!pe.pk&&h('p',{style:{fontSize:11,color:'var(--danger)',margin:'4px 0 0'}},
+        pe.name+' has no primary key yet — set one on that entity so the relationship can land on it.')
+    ),
+    picking&&h(EntityPicker,{model,graphData,
+      title:picking==='child'?'Which entity holds the key?':'Which entity is referenced?',
+      exclude:picking==='child'?parent:child,
+      onClose:()=>setPicking(null),
+      onPick:e=>{ (picking==='child'?setChild:setParent)(e.id); setPicking(null); }})
+  );
+}
+
+/* ── The change ledger ─────────────────────────────────────
+   The sidebar tab that answers the question every steering group asks:
+   what did we change from the industry standard, and can we put it back? */
+function ChangesPanel({base,edits,changeMap,graphData,note,onNote,onOpen,onRevertProduct,
+                       onRevertDomain,onRevertAll,onExport}){
+  const c=changeMap.counts;
+  const colors=(graphData&&graphData.domainColors)||{};
+  const [noteOpen,setNoteOpen]=useState(!!(note||'').trim());
+  if(!c.total) return h('div',{style:{textAlign:'center',paddingTop:26}},
+    h('div',{style:{fontSize:26,marginBottom:10,color:'var(--g-green-line)'}},'≡'),
+    h('p',{style:{color:'var(--muted)',fontSize:12,marginBottom:6}},'Unchanged'),
+    h('p',{style:{color:'var(--faint)',fontSize:10.5,lineHeight:1.6}},
+      'This is the industry model exactly as it ships. Everything you change from here is listed on this tab, and every line can be put back.')
+  );
+  const groups={added:[],modified:[],removed:[]};
+  Object.keys(changeMap.byKey).forEach(k=>{
+    const v=changeMap.byKey[k];
+    groups[v.state].push({key:k,...v});
+  });
+  const heads={added:['New entities','add'],modified:['Changed entities','mod'],
+               removed:['Removed entities','del']};
+  const dstate=changeMap.domState||{};
+  const domRows=Object.keys(dstate).sort();
+  return h('div',null,
+    h('div',{style:{display:'flex',gap:5,marginBottom:9,flexWrap:'wrap'}},
+      c.added>0&&h('span',{className:'chip-mini chip-add'},'+'+c.added+' NEW'),
+      c.modified>0&&h('span',{className:'chip-mini chip-mod'},c.modified+' CHANGED'),
+      c.removed>0&&h('span',{className:'chip-mini chip-del'},'−'+c.removed+' REMOVED')),
+
+    h('div',{style:{display:'flex',gap:6,marginBottom:11}},
+      h('button',{className:'btn',style:{flex:1,justifyContent:'center'},
+        title:'Download a Markdown summary of everything changed from the industry model',
+        onClick:onExport},'Change report'),
+      h('button',{className:'btn',style:{color:'var(--danger)'},
+        title:'Put the whole model back to the industry version',
+        onClick:onRevertAll},'↺ All')),
+
+    h('button',{className:'tbtn',style:{width:'100%',justifyContent:'flex-start',marginBottom:8},
+      onClick:()=>setNoteOpen(o=>!o)},(noteOpen?'▾':'▸')+' Session note'),
+    noteOpen&&h('textarea',{value:note||'',onChange:e=>onNote(e.target.value),
+      placeholder:'Who was in the room, what was agreed, what is still open.',
+      style:{minHeight:64,marginBottom:11,fontSize:11}}),
+
+    domRows.length>0&&h('div',null,
+      h('div',{className:'section-header'},'Domains'),
+      domRows.map(n=>h('div',{key:n,className:'chg-row',style:{cursor:'default'}},
+        h('span',{className:'chg-dot '+(dstate[n]==='added'?'add':dstate[n]==='removed'?'del':'mod')}),
+        h('span',{className:'name'+(dstate[n]==='removed'?' chg-strike':'')},n),
+        h('span',{className:'sub'},dstate[n]),
+        h('button',{className:'rowbtn',title:'Restore this domain',
+          onClick:e=>{e.stopPropagation();onRevertDomain(n);}},'↺')))),
+
+    ['added','modified','removed'].map(state=>{
+      const list=groups[state];
+      if(!list.length) return null;
+      return h('div',{key:state},
+        h('div',{className:'section-header'},heads[state][0]+' ('+list.length+')'),
+        list.sort((a,b)=>(a.to||a.from||'').localeCompare(b.to||b.from||'')).map(v=>{
+          const path=v.to||v.from||'';
+          const dom=path.split('.')[0];
+          const was=v.renamed?'  ·  was '+v.from:'';
+          return h('div',{key:v.key,className:'chg-row'},
+            h('span',{className:'chg-dot '+heads[state][1]}),
+            h('span',{className:'name'+(state==='removed'?' chg-strike':''),
+                onClick:()=>state!=='removed'&&onOpen(v.key),
+                style:{cursor:state==='removed'?'default':'pointer'},
+                title:(state==='removed'?'Removed from the model: '+path:'Open '+path)+was},
+              h('span',{style:{color:colors[dom]||'var(--muted)',marginRight:5}},'●'),
+              v.name,
+              v.renamed&&h('span',{className:'sub'},'  was '+v.from.split('.')[1])),
+            h('button',{className:'rowbtn',
+              title:state==='removed'?'Put this entity back':'Restore the industry model’s version',
+              onClick:e=>{e.stopPropagation();onRevertProduct(v.key);}},'↺'));
+        }));
+    })
+  );
+}
+
+/* ── Validation ────────────────────────────────────────────
+   Not a gate — a reading of what the room just did. Everything here is
+   clickable, because an issue nobody can jump to is a nag. */
+function IssuesDialog({issues,onOpen,onClose}){
+  const [only,setOnly]=useState('all');
+  const counts={error:0,warn:0,info:0};
+  issues.forEach(i=>{counts[i.sev]++;});
+  const shown=only==='all'?issues:issues.filter(i=>i.sev===only);
+  const label={error:'Errors',warn:'Warnings',info:'Notes'};
+  return h(Dlg,{title:'Model check',icon:'✓',size:'md',onClose,
+    sub:issues.length?issues.length+' things worth looking at':'Nothing to report',
+    foot:h(React.Fragment,null,h('span',{className:'spacer'}),
+      h('button',{className:'btn',onClick:onClose},'Close'))},
+    !issues.length&&h('div',{style:{textAlign:'center',padding:'32px 10px'}},
+      h('div',{style:{fontSize:34,marginBottom:10,color:'var(--g-green-line)'}},'✓'),
+      h('p',{style:{color:'var(--muted)',fontSize:13}},
+        'Every entity has a key, every relationship lands somewhere, and no name is used twice.')),
+    issues.length>0&&h('div',{className:'seg',style:{marginBottom:11}},
+      h('button',{className:only==='all'?'on':'',onClick:()=>setOnly('all')},'All ('+issues.length+')'),
+      ['error','warn','info'].map(s=>counts[s]>0&&h('button',{key:s,className:only===s?'on':'',
+        onClick:()=>setOnly(s)},label[s]+' ('+counts[s]+')'))),
+    shown.map((iss,i)=>h('button',{key:i,className:'issue',onClick:()=>onOpen(iss)},
+      h('span',{className:'sev sev-'+(iss.sev==='warn'?'warn':iss.sev==='error'?'error':'info')},
+        iss.sev==='warn'?'WARN':iss.sev.toUpperCase()),
+      h('span',{className:'txt'},h('b',null,iss.title),h('span',null,iss.body))))
+  );
+}
+
+/* ── Export menu ───────────────────────────────────────────
+   The workshop's output leaves in whichever shape the next step needs: back
+   into the toolchain as JSON, into a warehouse as DDL, into dbdiagram as
+   DBML, into a steering pack as Markdown, into a glossary as CSV. */
+function ExportMenu({onPick,onClose}){
+  useEffect(()=>{
+    const off=()=>onClose();
+    const t=setTimeout(()=>document.addEventListener('click',off),0);
+    return ()=>{clearTimeout(t);document.removeEventListener('click',off);};
+  },[onClose]);
+  const item=(id,label,sub)=>h('button',{key:id,onClick:()=>onPick(id),
+    style:{flexDirection:'column',alignItems:'flex-start',gap:1}},
+    h('span',{style:{fontWeight:650}},label),
+    h('span',{style:{fontSize:10,color:'var(--faint)'}},sub));
+  return h('div',{className:'menu',style:{minWidth:250},onClick:e=>e.stopPropagation()},
+    item('json','Model JSON','Round-trips into the agent and the installer'),
+    item('sql','Databricks SQL DDL','Schemas, tables, keys and constraints'),
+    item('dbml','DBML','Paste into dbdiagram.io'),
+    item('md','Change report','What moved from the industry model, in Markdown'),
+    item('csv','Data dictionary','Every column, for the glossary'));
+}
+
+/* ── The design bar ────────────────────────────────────────
+   One row, only while design mode is on. It carries the verbs that act on the
+   model as a whole; everything that acts on one thing lives on that thing. */
+function DesignBar({changeCounts,issues,saved,canUndo,canRedo,onUndo,onRedo,onAddDomain,
+                    onAddEntity,onAddRel,onCheck,onExport,exportOpen,onExportPick,
+                    onExportClose,onRevertAll,onChanges}){
+  const errors=issues.filter(i=>i.sev==='error').length;
+  const warns=issues.filter(i=>i.sev==='warn').length;
+  return h('div',{className:'designbar'},
+    h('span',{style:{fontSize:11,fontWeight:800,letterSpacing:'.06em',
+      color:'var(--brand)',textTransform:'uppercase',marginRight:2}},'✎ Design'),
+    h('span',{className:'vrule'}),
+    h('button',{className:'tbtn icononly',title:'Undo (⌘Z)',disabled:!canUndo,onClick:onUndo},'↶'),
+    h('button',{className:'tbtn icononly',title:'Redo (⇧⌘Z)',disabled:!canRedo,onClick:onRedo},'↷'),
+    h('span',{className:'vrule'}),
+    h('button',{className:'tbtn',title:'Add an entity to the model',onClick:onAddEntity},'+ Entity'),
+    h('button',{className:'tbtn',title:'Add a business domain',onClick:onAddDomain},'+ Domain'),
+    h('button',{className:'tbtn',title:'Relate two entities',onClick:onAddRel},'+ Relationship'),
+    h('span',{className:'vrule'}),
+    h('button',{className:'tbtn',onClick:onCheck,
+        title:'Check the model for missing keys, broken relationships and duplicate names',
+        style:errors?{color:'var(--danger)',borderColor:'var(--danger-bd)'}:null},
+      errors?'⚠ '+errors+' error'+(errors===1?'':'s')
+        :warns?'⚠ '+warns+' warning'+(warns===1?'':'s'):'✓ Check'),
+    h('button',{className:'tbtn',onClick:onChanges,
+        title:'Everything changed from the industry model'},
+      changeCounts.total?'≡ '+changeCounts.total+' change'+(changeCounts.total===1?'':'s'):'≡ No changes'),
+    h('div',{style:{position:'relative'}},
+      h('button',{className:'tbtn',title:'Take the model out of the browser',
+        onClick:e=>{e.stopPropagation();onExport();}},'↓ Export ▾'),
+      exportOpen&&h(ExportMenu,{onPick:onExportPick,onClose:onExportClose})),
+    changeCounts.total>0&&h('button',{className:'tbtn',style:{color:'var(--danger)'},
+      title:'Put the whole model back to the industry version',onClick:onRevertAll},'↺ Revert all'),
+    h('span',{className:'designbar-note'},
+      h('span',{className:'saved-dot'+(saved?'':' dirty')},h('i'),
+        saved?'Saved in this browser':'Saving…'))
+  );
+}
+
 function App(){
   // Graph state
-  const [graphData,setGraphData]=useState(null);
-  const [graphIndexes,setGraphIndexes]=useState(null);
+  /* The parsed industry model, untouched, and the workshop's overlay on top
+     of it. Both the graph and its indexes are derived from the pair further
+     down rather than stored, so an edit cannot leave them disagreeing. */
+  const [baseModel,setBaseModel]=useState(null);
+  const [editState,setEditState]=useState(()=>({key:'',data:emptyEdits()}));
+  const [designMode,setDesignMode]=useState(()=>store.get(DESIGN_LS_KEY,'')==='1');
+  const [editor,setEditor]=useState(null);
+  const [exportOpen,setExportOpen]=useState(false);
+  const [designSaved,setDesignSaved]=useState(true);
+  const [,setHistTick]=useState(0);
+  const histRef=useRef({past:[],future:[]});
+  const designModeRef=useRef(designMode);
+  designModeRef.current=designMode;
   const cyRef=useRef(null);
   const containerRef=useRef(null);
   // Fingerprint of the last drawn view. A re-render that carries the same model
@@ -3596,6 +5160,242 @@ function App(){
   const modelCache=useRef(new Map());
   const loadTokenRef=useRef(0);
 
+  /* ── Design mode: baseline + overlay ────────────────────
+     `baseModel` is the industry model exactly as it was parsed and is never
+     written to. `editState` is the workshop's overlay. Everything below —
+     the graph, the ERD, the map, the counts in the chrome — is derived from
+     the two, so the whole viewer draws the edited model without a single
+     component knowing that editing exists. */
+  const editKey=useMemo(()=>{
+    if(!baseModel) return '';
+    if(localModel||!sel.industry) return 'file:'+(baseModel.label||baseModel.model.name||'model');
+    return [sel.industry,sel.version||'latest',sel.flavour||'ecm'].join('/');
+  },[baseModel,localModel,sel.industry,sel.version,sel.flavour]);
+
+  // Until the overlay for THIS model has been read back, the baseline stands on
+  // its own: a stale overlay applied for one frame would draw another model's
+  // edits over this one.
+  const edits=editState.key===editKey?editState.data:NO_EDITS;
+
+  const model=useMemo(()=>baseModel?applyEdits(baseModel.model,edits):null,[baseModel,edits]);
+  const graphData=useMemo(()=>{
+    if(!model) return null;
+    try{ return {...extractGraph(model),sourceLabel:baseModel.label}; }
+    catch(e){ console.error('extractGraph',e); return null; }
+  },[model,baseModel]);
+  const graphIndexes=useMemo(()=>graphData?buildIndexes(graphData):null,[graphData]);
+  const changeMap=useMemo(()=>buildChangeMap(baseModel&&baseModel.model,edits),[baseModel,edits]);
+  const changeCur=changeMap.cur;
+  const issues=useMemo(()=>designMode&&model?validateModel(model):[],[designMode,model]);
+
+  useEffect(()=>{
+    if(baseModel&&!graphData) setLoadError('This model could not be read into a graph.');
+  },[baseModel,graphData]);
+
+  // Read this model's saved overlay whenever the loaded model changes.
+  useEffect(()=>{
+    if(!editKey) return;
+    const stored=readAllEdits()[editKey];
+    setEditState({key:editKey,
+      data:stored&&typeof stored==='object'?{...emptyEdits(),...stored}:emptyEdits()});
+    histRef.current={past:[],future:[]};
+    setHistTick(t=>t+1);
+  },[editKey]);
+
+  // …and write it back, debounced, so a burst of typing is one write.
+  useEffect(()=>{
+    if(!editState.key) return;
+    setDesignSaved(false);
+    const t=setTimeout(()=>{
+      const ok=writeEditsFor(editState.key,editState.data);
+      setDesignSaved(true);
+      if(!ok) setLoadError('This browser is out of storage, so the changes could not be saved. '+
+        'Export the model JSON before you close the tab.');
+    },400);
+    return ()=>clearTimeout(t);
+  },[editState]);
+
+  useEffect(()=>{store.set(DESIGN_LS_KEY,designMode?'1':'0');},[designMode]);
+  useEffect(()=>{ if(!designMode&&sidebarTab==='changes') setSidebarTab('model'); },[designMode,sidebarTab]);
+
+  const commitEdits=useCallback(next=>{
+    setEditState(prev=>{
+      if(prev.key!==editKey) return prev;
+      const hp=histRef.current;
+      hp.past.push(prev.data);
+      if(hp.past.length>100) hp.past.shift();
+      hp.future=[];
+      return {key:editKey,data:next};
+    });
+    setHistTick(t=>t+1);
+  },[editKey]);
+
+  const canUndo=histRef.current.past.length>0, canRedo=histRef.current.future.length>0;
+  const undo=useCallback(()=>{
+    const hp=histRef.current;
+    if(!hp.past.length) return;
+    hp.future.push(editState.data);
+    setEditState({key:editState.key,data:hp.past.pop()});
+    setHistTick(t=>t+1);
+  },[editState]);
+  const redo=useCallback(()=>{
+    const hp=histRef.current;
+    if(!hp.future.length) return;
+    hp.past.push(editState.data);
+    setEditState({key:editState.key,data:hp.future.pop()});
+    setHistTick(t=>t+1);
+  },[editState]);
+
+  useEffect(()=>{
+    if(!designMode) return;
+    const onKey=e=>{
+      if(!(e.metaKey||e.ctrlKey)||e.key.toLowerCase()!=='z') return;
+      const t=document.activeElement;
+      if(t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;   // the field owns its own undo
+      e.preventDefault();
+      e.shiftKey?redo():undo();
+    };
+    window.addEventListener('keydown',onKey);
+    return ()=>window.removeEventListener('keydown',onKey);
+  },[designMode,undo,redo]);
+
+  /* Overlay entries are filed under the name the INDUSTRY model gave a thing,
+     so anything that starts from what it is called now has to look it up. */
+  const keyForPath=useCallback(path=>{
+    const c=changeCur[path];
+    return c?c.key:path;
+  },[changeCur]);
+  const findProduct=useCallback(path=>{
+    if(!model) return null;
+    const [dn,pn]=String(path||'').split('.');
+    const d=(model.domains||[]).find(x=>x.name===dn);
+    const p=d&&(d.products||[]).find(x=>x.name===pn);
+    return p?{domain:dn,product:p}:null;
+  },[model]);
+
+  const openEntity=useCallback(path=>{
+    const found=findProduct(path);
+    if(!found) return;
+    setDesignMode(true);
+    setEditor({kind:'entity',key:keyForPath(path),domain:found.domain,product:found.product});
+    gcEvent('design-edit-entity','Design: edit entity');
+  },[findProduct,keyForPath]);
+
+  const openDomainEditor=useCallback(name=>{
+    if(!model) return;
+    const d=(model.domains||[]).find(x=>x.name===name);
+    if(!d) return;
+    setDesignMode(true);
+    setEditor({kind:'domain',key:changeMap.domKey[name]||name,domain:d});
+  },[model,changeMap]);
+
+  const newEntity=useCallback(domainName=>{
+    if(!model||!(model.domains||[]).length) return;
+    const dom=domainName&&(model.domains||[]).some(d=>d.name===domainName)
+      ?domainName:model.domains[0].name;
+    setEditor({kind:'entity',isNew:true,domain:dom,
+      product:blankProduct('new_entity',model.model_conventions)});
+    gcEvent('design-new-entity','Design: new entity');
+  },[model]);
+  const newDomain=useCallback(()=>{
+    setEditor({kind:'domain',isNew:true,domain:blankDomain('new_domain')});
+  },[]);
+
+  const saveEntity=useCallback(({product,domain,ren})=>{
+    if(!editor) return;
+    const base=baseModel&&baseModel.model;
+    commitEdits(editor.isNew
+      ? withProductAdd(edits,domain,product,base)
+      : withProduct(edits,editor.key,domain,product,ren,base));
+    setEditor(null);
+    setTreeClick({type:'table',value:baseKey(domain,product.name)});
+    setSelectedNode(null); setSelectedEdge(null);
+  },[editor,edits,commitEdits,baseModel]);
+
+  const removeEntity=useCallback(()=>{
+    if(!editor) return;
+    commitEdits(withProductDelete(edits,editor.key));
+    setEditor(null); setTreeClick(null); setSelectedNode(null); setSelectedEdge(null);
+  },[editor,edits,commitEdits]);
+
+  const saveDomain=useCallback(data=>{
+    if(!editor) return;
+    commitEdits(editor.isNew
+      ? withDomainAdd(edits,{...blankDomain(data.name),...data})
+      : withDomain(edits,editor.key,data));
+    setEditor(null);
+  },[editor,edits,commitEdits,baseModel]);
+  const removeDomain=useCallback(()=>{
+    if(!editor) return;
+    commitEdits(withDomainDelete(edits,editor.key,baseModel&&baseModel.model));
+    setEditor(null); setFilterState({type:null,value:null}); setNavHistory([]);
+    setTreeClick(null); setSelectedNode(null);
+  },[editor,edits,commitEdits,baseModel]);
+
+  const saveRelationship=useCallback(({child,parent,column,type,description})=>{
+    const found=findProduct(child);
+    const tgt=findProduct(parent);
+    if(!found||!tgt) return;
+    const target=parent+(tgt.product.primary_key?'.'+tgt.product.primary_key:'');
+    const attrs=[...(found.product.attributes||[]),
+      {name:column,column_name:column,type:type||'BIGINT',business_glossary_term:'',
+       description,value_regex:'',tags:'',foreign_key_to:target,
+       references:'Added in design mode'}];
+    commitEdits(withProduct(edits,keyForPath(child),found.domain,
+      {...found.product,attributes:attrs},null,baseModel&&baseModel.model));
+    setEditor(null);
+    setSelectedEdge(null);
+    setTreeClick({type:'table',value:child});
+    gcEvent('design-new-rel','Design: new relationship');
+  },[findProduct,keyForPath,edits,commitEdits,baseModel]);
+
+  // Dropping a relationship means clearing the foreign key off the column that
+  // carries it — the column itself stays, because it is usually still data.
+  const dropRelationship=useCallback(edge=>{
+    const found=findProduct(edge.source);
+    if(!found) return;
+    const attrs=(found.product.attributes||[]).map(a=>
+      a.name===edge.source_column?{...a,foreign_key_to:''}:a);
+    commitEdits(withProduct(edits,keyForPath(edge.source),found.domain,
+      {...found.product,attributes:attrs},null,baseModel&&baseModel.model));
+    setSelectedEdge(null);
+  },[findProduct,keyForPath,edits,commitEdits,baseModel]);
+
+  const revertProduct=useCallback(key=>{commitEdits(withProductRevert(edits,key));},[edits,commitEdits]);
+  const revertDomain=useCallback(name=>{
+    commitEdits(withDomainRevert(edits,name,baseModel&&baseModel.model));
+  },[edits,commitEdits,baseModel]);
+  const revertAll=useCallback(()=>{
+    if(!changeMap.counts.total) return;
+    if(!window.confirm('Put the whole model back to the industry version?\n\n'+
+      changeMap.counts.total+' change'+(changeMap.counts.total===1?'':'s')+
+      ' will be discarded. Export first if you want to keep them.')) return;
+    commitEdits(emptyEdits());
+    setEditor(null);
+  },[changeMap,commitEdits]);
+  const setNote=useCallback(v=>{commitEdits({...edits,note:v});},[edits,commitEdits]);
+
+  const openIssue=useCallback(iss=>{
+    setEditor(null);
+    if(iss.kind==='entity') setTimeout(()=>openEntity(iss.target),0);
+    else setTimeout(()=>openDomainEditor(iss.target),0);
+  },[openEntity,openDomainEditor]);
+
+  const doExport=useCallback(id=>{
+    setExportOpen(false);
+    if(!model||!baseModel) return;
+    const label=(sel.industry?sel.industry+'_'+(sel.flavour||'')
+      :(baseModel.label||model.name||'model'));
+    const cat=(baseModel.wrapper&&baseModel.wrapper.model_requirements&&
+      baseModel.wrapper.model_requirements.deployment_catalog)||'';
+    gcEvent('design-export-'+id,'Design: export '+id);
+    if(id==='json') exportModelJson(baseModel.wrapper,model,edits,label);
+    else if(id==='sql') exportDDL(model,label,cat);
+    else if(id==='dbml') exportDBML(model,label);
+    else if(id==='csv') exportDictionary(model,label);
+    else if(id==='md') exportChangeReport(baseModel.model,model,edits,label);
+  },[model,baseModel,edits,sel]);
+
   // Databricks browser state
   // Double-click detection
   const lastTapRef=useRef({});
@@ -3614,10 +5414,8 @@ function App(){
       return;
     }
     try{
-      const gd=extractGraph(model);
-      const idx=buildIndexes(gd);
-      setGraphData({...gd,sourceLabel:label});
-      setGraphIndexes(idx);
+      setBaseModel({model,label,
+        wrapper:(rawModel&&rawModel.model&&rawModel!==model)?rawModel:null});
       setFilterState({type:null,value:null});
       setNavHistory([]);
       setLoadError(null);
@@ -4389,6 +6187,14 @@ function App(){
     const viewKey=`${erdMode?'erd:':''}${type||''}::${fv&&typeof fv==='object'?JSON.stringify(fv):(fv||'')}`;
     const introduced=()=>lastFitKeyRef.current.graph===graphData&&lastFitKeyRef.current.key===viewKey;
     const mark=()=>{lastFitKeyRef.current={graph:graphData,key:viewKey};};
+    /* An edit produces a new graph for the SAME view. Reframing on it would
+       yank the camera away from whatever the modeller was pointing at, and
+       flying it in again would do it twice, so a redraw that only differs by
+       an edit keeps the viewport it already has. */
+    if(designModeRef.current&&lastFitKeyRef.current.key===viewKey&&lastFitKeyRef.current.graph){
+      mark();
+      return()=>{fitTimers.forEach(clearTimeout);};
+    }
     const camFree=()=>!viewerTookOverRef.current&&(!introRef.current||introRef.current.finished);
     viewerTookOverRef.current=false;
     const tryFly=()=>{
@@ -4482,6 +6288,9 @@ function App(){
 
   const gallery=!!manifest;
 
+  // Design mode adds a third sidebar tab, so all three squeeze up to fit.
+  const tabStyle={flex:1,minWidth:0,padding:designMode?'5px 4px':'5px 11px'};
+
   return h('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:'var(--bg)',color:'var(--ink)',overflow:'hidden'}},
 
     // ── The single top line ──────────────────────────────
@@ -4496,6 +6305,7 @@ function App(){
       onLoadJson:handleLoadJsonFile,
       showDomains,onShowDomains:setShowDomains,animate,onAnimate:setAnimate,
       viewMode,onViewMode:switchView,erdCoreOnly,onErdCoreOnly:setErdCoreOnly,
+      designMode,onDesignMode:v=>{gcEvent('design-mode-'+(v?'on':'off'),'Design mode '+(v?'on':'off'));setDesignMode(v);},
       actions:h(React.Fragment,null,
         // Graph controls do nothing without a graph, so they stay hidden until
         // one is loaded rather than sitting there inert.
@@ -4521,6 +6331,18 @@ function App(){
         h(ThemeControls,{theme,onTheme:setTheme,palette,onPalette:setPalette})
       )}),
 
+    designMode&&graphData&&h(DesignBar,{
+      changeCounts:changeMap.counts,issues,saved:designSaved,
+      canUndo,canRedo,onUndo:undo,onRedo:redo,
+      onAddEntity:()=>newEntity(filterState.type==='domain'?filterState.value:null),
+      onAddDomain:newDomain,
+      onAddRel:()=>setEditor({kind:'rel',initial:{}}),
+      onCheck:()=>setEditor({kind:'issues'}),
+      onChanges:()=>setSidebarTab('changes'),
+      onRevertAll:revertAll,
+      exportOpen,onExport:()=>setExportOpen(o=>!o),
+      onExportClose:()=>setExportOpen(false),onExportPick:doExport}),
+
     // Determinate transfer progress: the manifest gives us the true blob size,
     // so this is a real percentage rather than a spinner pretending to be one.
     progress&&h('div',{className:'bar',role:'progressbar',
@@ -4538,12 +6360,16 @@ function App(){
                       display:'flex',flexDirection:'column',flexShrink:0,minHeight:0}},
         graphData&&h('div',{'data-tour':'views',className:'seg',
                             style:{display:'flex',margin:'12px 15px 0',flexShrink:0}},
-          h('button',{className:sidebarTab==='model'?'on':'',style:{flex:1},
+          h('button',{className:sidebarTab==='model'?'on':'',style:tabStyle,
             onClick:()=>setSidebarTab('model')},'Model'),
-          h('button',{className:sidebarTab==='views'?'on':'',style:{flex:1},
+          h('button',{className:sidebarTab==='views'?'on':'',style:tabStyle,
             title:'Your saved subsets of this model',
             onClick:()=>{gcEvent('views-tab','Custom views tab');setSidebarTab('views');}},
-            '★ Views'+(myViews.length?' ('+myViews.length+')':''))
+            '★ Views'+(myViews.length?' ('+myViews.length+')':'')),
+          designMode&&h('button',{className:sidebarTab==='changes'?'on':'',style:tabStyle,
+            title:'What this session has changed from the industry model',
+            onClick:()=>setSidebarTab('changes')},
+            'Changes'+(changeMap.counts.total?' '+changeMap.counts.total:''))
         ),
         sidebarTab==='model'&&h(React.Fragment,null,
           h('div',{style:{padding:'12px 15px 0',flexShrink:0}},
@@ -4575,11 +6401,22 @@ function App(){
                         onToggleDomain:handleToggleDomain,onToggleTable:handleToggleTable,
                         onClickDomain:handleClickDomain,onClickTable:handleClickTable,
                         onClickAttr:handleClickAttr,
-                        picked,onTogglePick:togglePick,onTogglePickMany:togglePickMany})
+                        picked,onTogglePick:togglePick,onTogglePickMany:togglePickMany,
+                        designOn:designMode,changeCur,onEditDomain:openDomainEditor,
+                        onEditTable:openEntity,onAddEntity:newEntity})
           ),
           graphData&&sidebarTab==='views'&&h(CustomViewsPanel,{
             views:myViews,activeViewId,
-            onOpen:openCustomView,onEdit:editCustomView,onDelete:deleteCustomView})
+            onOpen:openCustomView,onEdit:editCustomView,onDelete:deleteCustomView}),
+          graphData&&sidebarTab==='changes'&&h(ChangesPanel,{
+            base:baseModel&&baseModel.model,edits,changeMap,graphData,
+            note:edits.note,onNote:setNote,
+            onOpen:key=>{
+              const c=changeMap.byKey[key];
+              if(c&&c.to) openEntity(c.to);
+            },
+            onRevertProduct:revertProduct,onRevertDomain:revertDomain,
+            onRevertAll:revertAll,onExport:()=>doExport('md')})
         ),
 
         // Selection tray — only in the way once something is actually ticked.
@@ -4680,6 +6517,8 @@ function App(){
         // the relationship layer can terminate against the visible cards.
         erdMode&&graphData&&h(SqlDbmErdView,{graphData,filterState,erdCoreOnly,showDomains,erdZoom,
           selectedEdgeId:selectedEdge&&selectedEdge.id,
+          design:{on:designMode,changeCur,onEdit:openEntity,
+                  onAdd:()=>newEntity(filterState.type==='domain'?filterState.value:null)},
           onTableClick:handleClickTable,
           onEdgeClick:data=>{setSelectedEdge(data);setSelectedNode(null);setTreeClick(null);}}),
 
@@ -4702,7 +6541,10 @@ function App(){
           selectedEdge:treeClick?null:selectedEdge,
           treeClick,graphData,
           domainSizes,setDomainSizes,filterState,
-          picked,onTogglePick:togglePick
+          picked,onTogglePick:togglePick,
+          design:{on:designMode,onEditEntity:openEntity,onEditDomain:openDomainEditor,
+                  onDropEdge:dropRelationship,
+                  onRelate:id=>setEditor({kind:'rel',initial:{child:id}})}
         })
       )
     ),
@@ -4721,7 +6563,29 @@ function App(){
       onClose:()=>setCmdOpen(false)}),
 
     // First-visit guided tour of the viewer's features (replayable via the ? button).
-    tourOpen&&h(Tour,{onClose:closeTour,getNodeRect})
+    tourOpen&&h(Tour,{onClose:closeTour,getNodeRect}),
+
+    /* The editors. All four are modal on purpose: a workshop makes one change
+       at a time, out loud, and a dialog is what keeps the room looking at the
+       same thing. Each edits a working copy and commits on save. */
+    designMode&&model&&editor&&editor.kind==='entity'&&h(EntityEditor,{
+      model,graphData,conv:model.model_conventions,entry:editor,
+      changeState:editor.isNew?null:((changeMap.byKey[editor.key]||{}).state||null),
+      onSave:saveEntity,onDelete:removeEntity,
+      onRevert:()=>{revertProduct(editor.key);setEditor(null);},
+      onClose:()=>setEditor(null)}),
+    designMode&&model&&editor&&editor.kind==='domain'&&h(DomainEditor,{
+      model,entry:editor,
+      changeState:editor.isNew?null:(changeMap.domState||{})[editor.key],
+      onSave:saveDomain,onDelete:removeDomain,
+      onRevert:()=>{revertDomain(editor.key);setEditor(null);},
+      onOpenEntity:path=>{setEditor(null);setTimeout(()=>openEntity(path),0);},
+      onClose:()=>setEditor(null)}),
+    designMode&&model&&editor&&editor.kind==='rel'&&h(RelationshipDialog,{
+      model,graphData,initial:editor.initial,
+      onSave:saveRelationship,onClose:()=>setEditor(null)}),
+    designMode&&editor&&editor.kind==='issues'&&h(IssuesDialog,{
+      issues,onOpen:openIssue,onClose:()=>setEditor(null)})
   );
 }
 

@@ -93,7 +93,7 @@ The launched job tags itself (prefix `dbx_vibe_agent_installer_`) with the `indu
 
 ## How to view a model
 
-The fastest way to explore one of these models visually is the **model-viewer app**, a Databricks App that renders any `model.json` as an interactive entity-relationship graph with three navigable views (full model, domain, single product).
+The fastest way to explore one of these models visually is the **model-viewer app**, a Databricks App that renders any `model.json` as an interactive entity-relationship graph with three navigable views (full model, domain, single product). It is also an editor: [design mode](#design-mode--make-it-your-model) lets a data architect adjust the shipped industry model with the business in the room, keeping a revertible list of everything that changed from the standard.
 
 ### Step 1 — Install the viewer app
 
@@ -128,6 +128,34 @@ Open the app URL. You have two ways to load any model from this repo:
 The first time you open a model you get one operating model and one lane per `division`. Press **Edit map** to shape it: **+ Operating model** and **+ Lane** add columns and rows, **⇔ Stretch / ⇔ Unstretch** spans a whole lane, **Merge → / Split** on a cell adjusts the span one column at a time, and **+ Add domain** inside a cell either opens a dropdown or accepts a tile dragged onto it. Tiles drag between cells and lanes; anything not yet placed waits in the **Not on the map** tray at the bottom. **Reset lanes** rebuilds the rows from the model's divisions and keeps your operating models.
 
 Outside edit mode, clicking a tile expands it in place to list that domain's entities grouped by sub-domain, and clicking an entity fills the details panel with its attributes and foreign keys. Like custom views, the arrangement is kept per model in your own browser (`localStorage`) and never uploaded.
+
+### Design mode — make it your model
+
+An industry model is a starting point, not an answer. The **Explore · ✎ Design** switch in the top bar turns the viewer into an editor, so a data architect can sit down with the business and cut the shipped model into the one the organisation actually has — rename entities into the language the room uses, drop what is out of scope, add what the industry model never knew about, and wire the relationships that result. No connection to a live system is involved; everything happens in the browser.
+
+**The entity editor** is where a workshop spends its time. Open it from the pencil on any entity — in the outline, on an ERD card, or from the details panel. The top half is the entity's business identity: its name, domain, sub-domain, type, and the sentence that describes it, which is what the room reads back. The bottom half is its columns, in a grid that behaves like the spreadsheet everyone already knows: type over a name, pick a data type, tick the primary key, reorder, delete. **References** on a column opens a searchable picker of every entity in the model and turns that column into a foreign key to the chosen entity's key. Nothing is committed until **Save changes**, so a conversation that goes nowhere costs nothing.
+
+**Paste columns** is the bridge from the world people arrive with. A `CREATE TABLE` copied out of a warehouse, a column of a spreadsheet, a list retyped off an ARIS or OAGIS diagram — paste it, check the preview of what was recognised, and add the lot. It does not attempt to map an external model onto this one; it just saves the typing.
+
+**Relationships** can also be created on their own (**+ Relationship**): pick the child, pick the parent, and the foreign key column is named and typed from the parent's key. A relationship selected in the graph or ERD can be removed from the details panel, which clears the reference and leaves the column.
+
+**Renames are safe.** Rename an entity, move it to another domain, or rename its primary key, and every foreign key pointing at it is re-pointed with it — including keys in other domains, and including relationships into entities the workshop invented. The change is recorded against the industry model's own names, so a second rename lands correctly on top of the first.
+
+**The change ledger** answers the question every steering group asks. The **Changes** tab lists everything that differs from the shipped industry model, grouped into added, changed and removed, with the entity's old name shown wherever it was renamed. Every line has a **↺** that restores that one entity to the industry version; **↺ Revert all** puts the whole model back. There is a session note for who was in the room and what was agreed.
+
+**Model check** (`✓ Check` in the design bar) reads the edited model back: entities with no key or no columns, keys that name a column that is not there, duplicate column names, relationships that no longer land anywhere, empty domains, names that break the model's snake_case convention. Every issue is clickable and opens the thing it is about.
+
+**Export** takes the result out of the browser in whichever shape the next step needs:
+
+| Export | What it is for |
+|---|---|
+| **Model JSON** | The edited model in the wrapper it arrived in — round-trips into the [model agent](./model-agent/) and the [installer](./model-installer/) |
+| **Databricks SQL DDL** | `CREATE SCHEMA` / `CREATE TABLE` with comments, primary keys and foreign key constraints |
+| **DBML** | Paste straight into [dbdiagram.io](https://dbdiagram.io) |
+| **Change report** | A Markdown summary of everything that moved from the industry model, for a steering pack |
+| **Data dictionary** | Every column of every entity as CSV, for a glossary |
+
+Changes are saved in your own browser (`localStorage`), per model, as a delta rather than a copy of the model — so a full day's workshop survives a refresh without filling the browser's storage, and switching industry or flavour leaves each model's changes where they were. `⌘Z` / `⇧⌘Z` undo and redo. **Export the model JSON before you close the tab** if the work matters: nothing is uploaded anywhere, and clearing site data clears the changes.
 
 ---
 
