@@ -687,6 +687,73 @@
      diagram keeps them for the link under the pointer or the selected one */
   .erd-dense .erd-tag{display:none}
   .erd-dense .erd-conn:hover .erd-tag,.erd-dense .erd-conn.sel .erd-tag{display:block}
+
+  /* Business domain map. Columns are operating models, lanes are the rows that
+     run across them, and a lane is cut into cells that each cover one or more
+     columns. Nothing here positions a tile: every position comes from the saved
+     board, so the sheet only owns the resting look and the drag affordances. */
+  .bmap-colhead{display:grid;position:sticky;top:0;z-index:6;
+    padding:8px 13px;margin-bottom:6px;background:var(--bg);
+    border-bottom:1px solid var(--line)}
+  .bmap-colcell{display:flex;align-items:center;gap:4px;min-width:0;padding:0 10px}
+  .bmap-colcell+.bmap-colcell{border-left:1px dashed var(--line-strong)}
+  .bmap-colname{font-size:11px;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bmap-lane{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    margin-bottom:16px;box-shadow:var(--shadow)}
+  .bmap-lane-head{display:flex;align-items:center;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);background:var(--well);
+    border-radius:11px 11px 0 0}
+  .bmap-lane-name{font-size:12px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted)}
+  /* the lane's own grid: one track per operating model, cells spanning them */
+  .bmap-cells{display:grid;padding:12px;align-items:start}
+  .bmap-cell{min-width:0;padding:0 10px;border-radius:8px}
+  .bmap-cell+.bmap-cell{border-left:1px dashed var(--line-strong)}
+  .bmap-cell-head{display:flex;align-items:center;gap:5px;margin-bottom:7px;
+    font-size:9.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--faint)}
+  .bmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:10px;align-items:start}
+  .bmap-tile{border-radius:10px;padding:10px 11px;text-align:left;font:inherit;
+    display:flex;flex-direction:column;gap:6px;min-width:0;
+    transition:box-shadow .12s,transform .12s}
+  .bmap-tile.pick{cursor:pointer}
+  /* in edit mode the whole tile is the drag source, apart from its own select */
+  .bmap-tile[draggable="true"]{cursor:grab}
+  .bmap-tile[draggable="true"] select{cursor:pointer}
+  .bmap-tile.pick:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+  .bmap-tile.open{grid-column:1/-1}
+  .bmap-tile-name{font-size:12.5px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bmap-tile-desc{font-size:10.5px;line-height:1.45;opacity:.85;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bmap-sub{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;
+    background:var(--veil);white-space:nowrap}
+  .bmap-vacant{border:1px dashed var(--line-strong);background:var(--well);
+    color:var(--muted);align-items:stretch}
+  /* the one way to fill a cell: press it for a slot, or drop a domain on it */
+  .bmap-add{min-height:46px;padding:10px;border:1px dashed var(--line-strong);
+    border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;
+    font:inherit;font-size:11px;font-weight:700}
+  .bmap-add:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-wash)}
+  /* where a dragged tile would land */
+  .bmap-drop{outline:2px dashed var(--brand);outline-offset:2px}
+  .bmap-row{display:flex;align-items:center;gap:8px;width:100%;padding:5px 8px;
+    border:0;border-radius:6px;background:transparent;font:inherit;font-size:11.5px;
+    color:var(--ink);cursor:pointer;text-align:left}
+  .bmap-row:hover{background:var(--veil)}
+  .bmap-row.sel{background:var(--brand-wash);outline:1px solid var(--brand-bd);color:var(--brand-ink)}
+  .bmap-row b{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  .bmap-row small{color:var(--faint);font-size:10px;flex-shrink:0}
+  .bmap-grip{cursor:grab;color:var(--muted);font-size:11px;line-height:1;
+    background:transparent;border:0;padding:0 2px}
+  .bmap-x{width:18px;height:18px;padding:0;flex-shrink:0;background:transparent;
+    border:1px solid transparent;border-radius:4px;color:var(--muted);cursor:pointer;
+    font-size:10px;line-height:16px}
+  .bmap-x:hover:not(:disabled){border-color:var(--line-strong);color:var(--danger)}
+  .bmap-x:disabled{opacity:.3;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -1842,6 +1909,574 @@ function CustomViewsPanel({views,activeViewId,onOpen,onEdit,onDelete}){
   );
 }
 
+/* ── Business domain board ────────────────────────────────
+   The domain map is the one view whose shape is not in the model file. It is a
+   grid: columns are the operating models the business is run as, lanes are the
+   rows across them, and a lane is cut into cells that each cover one or more
+   columns — so a lane that means the same thing everywhere can be stretched the
+   whole way across while the lane above it is split per operating model. Each
+   cell holds slots, and a slot points at one of the model's domains.
+
+   A board is seeded from the `division` field the first time a model is opened
+   and from then on lives per model in this browser's localStorage, beside the
+   custom views, and never leaves it. */
+const BOARD_LS_KEY='dbx-model-domainboard';
+const BOARD_LANE_CAP=16, BOARD_COL_CAP=8;   // guards on the localStorage budget
+
+function readAllBoards(){
+  try{
+    const raw=localStorage.getItem(BOARD_LS_KEY);
+    if(!raw) return {};
+    const o=JSON.parse(raw);
+    return (o&&typeof o==='object'&&!Array.isArray(o))?o:{};
+  }catch(_){ return {}; }
+}
+function writeAllBoards(all){
+  try{ localStorage.setItem(BOARD_LS_KEY,JSON.stringify(all)); }catch(_){}
+}
+function newBoardId(prefix){ return prefix+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* Every lane covers every column exactly once: the spans of its cells always
+   sum to the column count. Rather than trusting that of stored data, or of the
+   arithmetic in an edit, it is imposed here — a lane that comes up short grows
+   empty cells on the right, and one that overruns has its tail folded into the
+   last cell that still fits, so no tile is ever dropped on the floor. */
+function fitCells(cells,ncols){
+  const src=(cells||[]).filter(Boolean);
+  const out=[];
+  let used=0;
+  src.forEach(cell=>{
+    const slots=(cell.slots||[]);
+    if(used>=ncols){
+      if(out.length) out[out.length-1].slots=out[out.length-1].slots.concat(slots);
+      return;
+    }
+    const span=Math.max(1,Math.min(parseInt(cell.span,10)||1,ncols-used));
+    out.push({id:cell.id||newBoardId('c'),span,slots:slots.slice()});
+    used+=span;
+  });
+  while(used<ncols){ out.push({id:newBoardId('c'),span:1,slots:[]}); used++; }
+  return out.length?out:[{id:newBoardId('c'),span:ncols,slots:[]}];
+}
+
+/* The board a model starts with: one operating model, and one lane per
+   division, in the order the divisions first appear. A model that names no
+   division anywhere gets a single lane holding everything, which is still a
+   workable thing to cut up by hand. */
+function seedLanes(graphData,ncols){
+  const lanes=[], byDivision={};
+  Object.entries((graphData&&graphData.domainHierarchy)||{}).forEach(([dname,ddata])=>{
+    const division=String(ddata.division||'').trim()||'Domains';
+    if(!byDivision[division]){
+      byDivision[division]={id:newBoardId('l'),name:division,
+                            cells:[{id:newBoardId('c'),span:ncols,slots:[]}]};
+      lanes.push(byDivision[division]);
+    }
+    byDivision[division].cells[0].slots.push({id:newBoardId('s'),domain:dname});
+  });
+  return lanes;
+}
+function seedBoard(graphData){
+  return {columns:[{id:newBoardId('k'),name:'Operating model 1'}],lanes:seedLanes(graphData,1)};
+}
+
+/* A saved board outlives the model it was drawn against — a later version can
+   rename or drop a domain — so every slot is checked against the model on the
+   way in. A slot pointing at a domain that is gone becomes an empty slot rather
+   than a tile with no name behind it. */
+function normaliseBoard(board,graphData){
+  const known=new Set(Object.keys((graphData&&graphData.domainHierarchy)||{}));
+  const cleanSlots=list=>((list)||[]).map(slot=>({
+    id:(slot&&slot.id)||newBoardId('s'),
+    domain:(slot&&known.has(slot.domain))?slot.domain:null
+  }));
+  let columns=(((board&&board.columns)||[]).slice(0,BOARD_COL_CAP)).map((col,i)=>({
+    id:(col&&col.id)||newBoardId('k'),
+    name:typeof (col&&col.name)==='string'?col.name:('Operating model '+(i+1))
+  }));
+  if(!columns.length) columns=[{id:newBoardId('k'),name:'Operating model 1'}];
+  const lanes=(((board&&board.lanes)||[]).slice(0,BOARD_LANE_CAP)).map(lane=>{
+    /* Boards saved before the map had columns kept their slots on the lane
+       itself; those become one cell stretched across every column. */
+    const cells=(Array.isArray(lane&&lane.cells)&&lane.cells.length)
+      ? lane.cells.map(cell=>({id:(cell&&cell.id)||newBoardId('c'),
+                               span:Math.max(1,parseInt(cell&&cell.span,10)||1),
+                               slots:cleanSlots(cell&&cell.slots)}))
+      : [{id:newBoardId('c'),span:columns.length,slots:cleanSlots(lane&&lane.slots)}];
+    return {id:(lane&&lane.id)||newBoardId('l'),
+            name:typeof (lane&&lane.name)==='string'?lane.name:'',
+            cells:fitCells(cells,columns.length)};
+  });
+  return {columns,
+          lanes:lanes.length?lanes:seedLanes(graphData,columns.length)};
+}
+
+function boardPlaced(board){
+  const placed=new Set();
+  (((board&&board.lanes)||[])).forEach(lane=>
+    ((lane.cells)||[]).forEach(cell=>
+      ((cell.slots)||[]).forEach(slot=>{ if(slot.domain) placed.add(slot.domain); })));
+  return placed;
+}
+
+/* The column indexes a lane's cells start at, so a cell can name the operating
+   models it covers and the column reorder can tell whether a lane has a
+   boundary where the swap needs one. */
+function cellStarts(lane){
+  const starts=[]; let at=0;
+  (lane.cells||[]).forEach(cell=>{ starts.push(at); at+=cell.span; });
+  return starts;
+}
+
+const BMAP_HINT={fontSize:11,color:'var(--faint)',lineHeight:1.5};
+
+/* ── Business domain view ─────────────────────────────────
+   The model arranged the way the business talks about it rather than the way
+   the graph lays it out. Every tile is a slot with a domain assigned to it, and
+   opening a tile lists that domain's entities in place, so the map itself stays
+   on screen while it is read; picking an entity fills the details panel exactly
+   as a click in the tree does. */
+function DomainBoardView({graphData,board,onBoard,onEntityClick,selectedEntityId,openDomain,onOpenDomain}){
+  const [editing,setEditing]=useState(false);
+  const [dropHint,setDropHint]=useState(null);
+  const dragRef=useRef(null);
+
+  const columns=board.columns||[], lanes=board.lanes||[], ncols=columns.length;
+  const domainNames=useMemo(()=>Object.keys(graphData.domainHierarchy||{}).sort(),[graphData]);
+  const placed=useMemo(()=>boardPlaced(board),[board]);
+  const unplaced=useMemo(()=>domainNames.filter(d=>!placed.has(d)),[domainNames,placed]);
+  const gridCols=`repeat(${Math.max(1,ncols)},minmax(0,1fr))`;
+
+  const commit=onBoard;
+  const setLanes=useCallback(next=>commit({columns,lanes:next}),[commit,columns]);
+  const editLane=useCallback((laneId,fn)=>
+    setLanes(lanes.map(lane=>lane.id===laneId?fn(lane):lane)),[lanes,setLanes]);
+  const editCell=useCallback((laneId,cellId,fn)=>
+    editLane(laneId,lane=>({...lane,cells:lane.cells.map(c=>c.id===cellId?fn(c):c)})),[editLane]);
+
+  // ── Operating models (columns) ─────────────────────────
+  const addColumn=useCallback(()=>{
+    if(ncols>=BOARD_COL_CAP) return;
+    const next=[...columns,{id:newBoardId('k'),name:'Operating model '+(ncols+1)}];
+    commit({columns:next,lanes:lanes.map(lane=>
+      // a lane already stretched the whole way across stays stretched
+      lane.cells.length===1
+        ? {...lane,cells:[{...lane.cells[0],span:next.length}]}
+        : {...lane,cells:[...lane.cells,{id:newBoardId('c'),span:1,slots:[]}]})});
+  },[columns,lanes,ncols,commit]);
+
+  const renameColumn=useCallback((colId,name)=>
+    commit({columns:columns.map(c=>c.id===colId?{...c,name}:c),lanes}),[columns,lanes,commit]);
+
+  /* Losing an operating model must not lose the tiles standing in it: a cell
+     that only covered this column hands its tiles to whichever neighbour
+     survives, and a cell that covered more simply gets narrower. */
+  const removeColumn=useCallback(index=>{
+    if(ncols<=1) return;
+    const doomed=columns[index];
+    const tiles=lanes.reduce((n,lane)=>{
+      const starts=cellStarts(lane);
+      return n+lane.cells.reduce((m,cell,ci)=>
+        (index>=starts[ci]&&index<starts[ci]+cell.span&&cell.span===1)
+          ? m+cell.slots.filter(s=>s.domain).length : m,0);
+    },0);
+    if(tiles&&!window.confirm('Remove “'+(doomed.name||'this operating model')+'”? Its '+tiles+
+        ' tile'+(tiles===1?'':'s')+' move into the neighbouring column.')) return;
+    const nextCols=columns.filter((_,i)=>i!==index);
+    const nextLanes=lanes.map(lane=>{
+      const starts=cellStarts(lane);
+      let orphans=[]; const cells=[];
+      lane.cells.forEach((cell,ci)=>{
+        const covers=index>=starts[ci]&&index<starts[ci]+cell.span;
+        if(!covers){ cells.push({...cell,slots:orphans.concat(cell.slots)}); orphans=[]; return; }
+        if(cell.span>1){ cells.push({...cell,span:cell.span-1,slots:orphans.concat(cell.slots)}); orphans=[]; return; }
+        orphans=orphans.concat(cell.slots);
+      });
+      if(orphans.length){
+        if(cells.length) cells[cells.length-1]={...cells[cells.length-1],
+                                                slots:cells[cells.length-1].slots.concat(orphans)};
+        else cells.push({id:newBoardId('c'),span:1,slots:orphans});
+      }
+      return {...lane,cells:fitCells(cells,nextCols.length)};
+    });
+    commit({columns:nextCols,lanes:nextLanes});
+  },[columns,lanes,ncols,commit]);
+
+  /* Swapping two operating models only means anything when every lane has a
+     cell boundary on both sides of the pair; a lane stretched across the two
+     has nothing to swap, and shuffling the headers under it would silently
+     relabel its tiles. The arrows stay disabled instead. */
+  const canSwap=useCallback((i,j)=>lanes.every(lane=>{
+    const starts=cellStarts(lane);
+    const one=at=>lane.cells.some((cell,ci)=>starts[ci]===at&&cell.span===1);
+    return one(i)&&one(j);
+  }),[lanes]);
+
+  const moveColumn=useCallback((index,dir)=>{
+    const j=index+dir;
+    if(j<0||j>=ncols||!canSwap(Math.min(index,j),Math.max(index,j))) return;
+    const nextCols=columns.slice();
+    nextCols.splice(j,0,nextCols.splice(index,1)[0]);
+    const nextLanes=lanes.map(lane=>{
+      const starts=cellStarts(lane);
+      const a=starts.indexOf(index), b=starts.indexOf(j);
+      if(a<0||b<0) return lane;
+      const cells=lane.cells.slice();
+      cells.splice(b,0,cells.splice(a,1)[0]);
+      return {...lane,cells};
+    });
+    commit({columns:nextCols,lanes:nextLanes});
+  },[columns,lanes,ncols,canSwap,commit]);
+
+  // ── Lanes ──────────────────────────────────────────────
+  const addLane=useCallback(()=>{
+    if(lanes.length>=BOARD_LANE_CAP) return;
+    setLanes([...lanes,{id:newBoardId('l'),name:'New lane',
+                        cells:fitCells([{id:newBoardId('c'),span:ncols,slots:[]}],ncols)}]);
+  },[lanes,ncols,setLanes]);
+
+  const removeLane=useCallback(lane=>{
+    const filled=lane.cells.reduce((n,c)=>n+c.slots.filter(s=>s.domain).length,0);
+    if(filled&&!window.confirm('Remove the lane “'+(lane.name||'untitled')+'”? Its '+filled+
+        ' domain'+(filled===1?'':'s')+' go back to the unplaced list.')) return;
+    setLanes(lanes.filter(l=>l.id!==lane.id));
+  },[lanes,setLanes]);
+
+  const moveLane=useCallback((laneId,dir)=>{
+    const i=lanes.findIndex(l=>l.id===laneId), j=i+dir;
+    if(i<0||j<0||j>=lanes.length) return;
+    const next=lanes.slice();
+    next.splice(j,0,next.splice(i,1)[0]);
+    setLanes(next);
+  },[lanes,setLanes]);
+
+  /* Stretching a lane is a merge of all its cells into one; unstretching cuts
+     it back to one cell per operating model, with the tiles left in the first
+     rather than guessed at. */
+  const stretchLane=useCallback(laneId=>editLane(laneId,lane=>({...lane,
+    cells:[{id:lane.cells[0].id,span:ncols,
+            slots:lane.cells.reduce((all,c)=>all.concat(c.slots),[])}]})),[editLane,ncols]);
+  const unstretchLane=useCallback(laneId=>editLane(laneId,lane=>({...lane,
+    cells:fitCells([{id:lane.cells[0].id,span:1,
+                     slots:lane.cells.reduce((all,c)=>all.concat(c.slots),[])}],ncols)})),[editLane,ncols]);
+
+  const mergeRight=useCallback((laneId,cellIndex)=>editLane(laneId,lane=>{
+    if(cellIndex>=lane.cells.length-1) return lane;
+    const cells=lane.cells.slice();
+    const a=cells[cellIndex], b=cells[cellIndex+1];
+    cells.splice(cellIndex,2,{id:a.id,span:a.span+b.span,slots:a.slots.concat(b.slots)});
+    return {...lane,cells};
+  }),[editLane]);
+
+  const splitCell=useCallback((laneId,cellIndex)=>editLane(laneId,lane=>{
+    const cell=lane.cells[cellIndex];
+    if(!cell||cell.span<2) return lane;
+    const cells=lane.cells.slice();
+    cells.splice(cellIndex,1,{...cell,span:cell.span-1},{id:newBoardId('c'),span:1,slots:[]});
+    return {...lane,cells};
+  }),[editLane]);
+
+  // ── Slots ──────────────────────────────────────────────
+  const addSlot=useCallback((laneId,cellId,domain)=>
+    editCell(laneId,cellId,cell=>({...cell,
+      slots:[...cell.slots,{id:newBoardId('s'),domain:domain||null}]})),[editCell]);
+  const setSlotDomain=useCallback((laneId,cellId,slotId,domain)=>
+    editCell(laneId,cellId,cell=>({...cell,
+      slots:cell.slots.map(s=>s.id===slotId?{...s,domain:domain||null}:s)})),[editCell]);
+  const removeSlot=useCallback((laneId,cellId,slotId)=>
+    editCell(laneId,cellId,cell=>({...cell,
+      slots:cell.slots.filter(s=>s.id!==slotId)})),[editCell]);
+
+  /* One drop handler for both sources: a tile already on the board is lifted
+     out of its cell first, a domain dragged in from the unplaced tray becomes a
+     new slot. `beforeSlotId` is the slot it lands in front of, or null for the
+     end of the cell. */
+  const dropOn=useCallback((toLaneId,toCellId,beforeSlotId)=>{
+    const payload=dragRef.current;
+    dragRef.current=null; setDropHint(null);
+    if(!payload) return;
+    if(payload.kind==='slot'&&payload.slotId===beforeSlotId) return;
+    let moving=null;
+    const next=lanes.map(lane=>({...lane,
+      cells:lane.cells.map(cell=>({...cell,slots:cell.slots.slice()}))}));
+    if(payload.kind==='slot'){
+      next.forEach(lane=>{
+        if(lane.id!==payload.laneId) return;
+        lane.cells.forEach(cell=>{
+          if(cell.id!==payload.cellId) return;
+          const i=cell.slots.findIndex(s=>s.id===payload.slotId);
+          if(i>=0) moving=cell.slots.splice(i,1)[0];
+        });
+      });
+    } else if(payload.kind==='domain'){
+      moving={id:newBoardId('s'),domain:payload.domain};
+    }
+    if(!moving) return;
+    setLanes(next.map(lane=>lane.id!==toLaneId?lane:{...lane,
+      cells:lane.cells.map(cell=>{
+        if(cell.id!==toCellId) return cell;
+        const at=beforeSlotId?cell.slots.findIndex(s=>s.id===beforeSlotId):-1;
+        const slots=cell.slots.slice();
+        if(at>=0) slots.splice(at,0,moving); else slots.push(moving);
+        return {...cell,slots};
+      })}));
+  },[lanes,setLanes]);
+
+  const dropTarget=(laneId,cellId,slotId,hintId)=>({
+    onDragOver:e=>{ if(!dragRef.current) return; e.preventDefault(); e.stopPropagation();
+                    e.dataTransfer.dropEffect='move'; setDropHint(hintId); },
+    onDragLeave:()=>setDropHint(hint=>hint===hintId?null:hint),
+    onDrop:e=>{ e.preventDefault(); e.stopPropagation(); dropOn(laneId,cellId,slotId); }
+  });
+  const dragSource=payload=>({
+    draggable:editing,
+    onDragStart:e=>{ dragRef.current=payload; e.dataTransfer.effectAllowed='move';
+                     try{ e.dataTransfer.setData('text/plain',payload.domain||payload.slotId||''); }catch(_){} },
+    onDragEnd:()=>{ dragRef.current=null; setDropHint(null); }
+  });
+
+  /* The entity list behind an opened tile, grouped the way the model groups it.
+     Products with no subdomain fall into a trailing "other" bucket rather than
+     being dropped or given a made-up group. */
+  const entityGroups=useCallback(dname=>{
+    const tables=(graphData.domainHierarchy[dname]||{}).tables||{};
+    const groups={};
+    Object.entries(tables).forEach(([tname,tdata])=>{
+      const key=tdata.subdomain||'';
+      (groups[key]=groups[key]||[]).push({...tdata,name:tname});
+    });
+    return Object.keys(groups)
+      .sort((a,b)=>a===''?1:b===''?-1:a.localeCompare(b))
+      .map(key=>[key,groups[key].sort((a,b)=>a.name.localeCompare(b.name))]);
+  },[graphData]);
+
+  function renderTile(lane,cell,slot){
+    const dname=slot.domain;
+    const ddata=dname?(graphData.domainHierarchy[dname]||{}):null;
+    const chip=hueChip(hueOfSlot(ddata&&(ddata.slot||(graphData.domainSlots||{})[dname])));
+    const stats=(dname&&(graphData.domainStats||{})[dname])||{};
+    const open=!editing&&dname&&openDomain===dname;
+    const drop=dropHint===slot.id?' bmap-drop':'';
+    const moves={...dragSource({kind:'slot',laneId:lane.id,cellId:cell.id,slotId:slot.id}),
+                 ...dropTarget(lane.id,cell.id,slot.id,slot.id)};
+
+    if(!dname) return h('div',{key:slot.id,className:'bmap-tile bmap-vacant'+drop,...moves},
+      h('div',{style:{display:'flex',alignItems:'center',gap:6}},
+        h('span',{style:{fontSize:10.5,fontWeight:700,flex:1}},'Empty slot'),
+        h('button',{className:'bmap-x',title:'Remove this slot',
+          onClick:()=>removeSlot(lane.id,cell.id,slot.id)},'✕')),
+      h('select',{value:'',style:{width:'100%',padding:'4px 6px',fontSize:11},
+        'aria-label':'Domain for this slot',
+        onChange:e=>setSlotDomain(lane.id,cell.id,slot.id,e.target.value)},
+        h('option',{value:''},'— pick a domain —'),
+        domainNames.map(d=>h('option',{key:d,value:d},
+          d.replace(/_/g,' ')+(placed.has(d)?'  (placed)':''))))
+    );
+
+    const subdomains=Object.keys((ddata&&ddata.subdomains)||{}).sort();
+    return h('div',{key:slot.id,
+        className:'bmap-tile'+(open?' open':'')+(editing?'':' pick')+drop,
+        style:{...chip,borderLeft:`4px solid ${ddata.color||'var(--brand)'}`},
+        ...moves,
+        role:editing?undefined:'button',
+        tabIndex:editing?undefined:0,
+        'aria-expanded':editing?undefined:!!open,
+        onClick:editing?undefined:()=>onOpenDomain(open?null:dname),
+        onKeyDown:editing?undefined:e=>{
+          if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onOpenDomain(open?null:dname); }
+        }},
+
+      h('div',{style:{display:'flex',alignItems:'center',gap:6}},
+        editing&&h('span',{className:'bmap-grip',title:'Drag to move this domain'},'⁙'),
+        h('span',{className:'bmap-tile-name',style:{flex:1}},dname.replace(/_/g,' ')),
+        !editing&&h('span',{style:{fontSize:10,opacity:.7}},open?'▾':'▸'),
+        editing&&h('button',{className:'bmap-x',title:'Clear this slot',
+          onClick:e=>{e.stopPropagation();removeSlot(lane.id,cell.id,slot.id);}},'✕')
+      ),
+
+      editing
+        ? h('select',{value:dname,style:{width:'100%',padding:'4px 6px',fontSize:11},
+            'aria-label':'Domain for this slot',
+            onClick:e=>e.stopPropagation(),
+            onChange:e=>setSlotDomain(lane.id,cell.id,slot.id,e.target.value)},
+            h('option',{value:''},'— empty —'),
+            domainNames.map(d=>h('option',{key:d,value:d},
+              d.replace(/_/g,' ')+(placed.has(d)&&d!==dname?'  (placed)':''))))
+        : h(React.Fragment,null,
+            ddata.description&&h('div',{className:'bmap-tile-desc'},ddata.description),
+            h('div',{style:{display:'flex',gap:9,fontSize:10,fontWeight:700,opacity:.9}},
+              h('span',null,fmtCount(stats.table_count)+' entities'),
+              h('span',null,fmtCount(stats.attr_count)+' attrs'),
+              stats.fk_count?h('span',null,fmtCount(stats.fk_count)+' FKs'):null),
+            subdomains.length>0&&h('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+              subdomains.slice(0,open?subdomains.length:3).map(sd=>
+                h('span',{key:sd,className:'bmap-sub'},sd.replace(/_/g,' '))),
+              !open&&subdomains.length>3&&h('span',{className:'bmap-sub'},'+'+(subdomains.length-3)))
+          ),
+
+      open&&h('div',{style:{marginTop:4,paddingTop:8,borderTop:'1px solid var(--veil)',
+                            maxHeight:340,overflowY:'auto'},
+          onClick:e=>e.stopPropagation()},
+        entityGroups(dname).map(([sub,rows])=>h('div',{key:sub||'__other',style:{marginBottom:6}},
+          h('div',{style:{fontSize:9.5,fontWeight:800,letterSpacing:'.06em',
+                          textTransform:'uppercase',opacity:.7,margin:'4px 4px 3px'}},
+            (sub||'other').replace(/_/g,' ')),
+          rows.map(row=>h('button',{key:row.name,type:'button',
+              className:'bmap-row'+(selectedEntityId===row.full_id?' sel':''),
+              title:row.description||row.name,
+              onClick:()=>onEntityClick(row.full_id)},
+            h('b',null,row.name.replace(/_/g,' ')),
+            h('small',null,fmtCount(row.attribute_count)+' attrs'),
+            row.fk_count?h('small',{style:{color:'var(--danger)'}},row.fk_count+' FK'):null))
+        ))
+      )
+    );
+  }
+
+  function renderCell(lane,cell,cellIndex,start){
+    const covered=columns.slice(start,start+cell.span);
+    const label=covered.map(c=>c.name||'Untitled').join(' + ');
+    const hintId='cell:'+cell.id;
+    return h('div',{key:cell.id,className:'bmap-cell'+(dropHint===hintId?' bmap-drop':''),
+        style:{gridColumn:'span '+cell.span},
+        ...dropTarget(lane.id,cell.id,null,hintId)},
+      // Which operating models this cell covers only needs saying when there is
+      // more than one of them, or when a cell has been stretched over several.
+      (ncols>1&&editing)&&h('div',{className:'bmap-cell-head'},
+        h('span',{style:{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',
+                         whiteSpace:'nowrap'}},label),
+        cell.span>1&&h('button',{className:'tbtn',style:{height:19,fontSize:9.5},
+          title:'Split the last operating model back out of this cell',
+          onClick:()=>splitCell(lane.id,cellIndex)},'Split'),
+        cellIndex<lane.cells.length-1&&h('button',{className:'tbtn',style:{height:19,fontSize:9.5},
+          title:'Stretch this cell over the next operating model too',
+          onClick:()=>mergeRight(lane.id,cellIndex)},'Merge →')
+      ),
+      h('div',{className:'bmap-grid'},
+        cell.slots.map(slot=>renderTile(lane,cell,slot)),
+        // The one affordance for filling a cell: press it for a slot with a
+        // dropdown, or drag a domain straight onto it.
+        editing&&h('button',{key:'__add',type:'button',
+          className:'bmap-add'+(dropHint===('add:'+cell.id)?' bmap-drop':''),
+          title:'Click to add a slot here, or drag a domain onto it',
+          onClick:()=>addSlot(lane.id,cell.id,null),
+          ...dropTarget(lane.id,cell.id,null,'add:'+cell.id)},
+          '+ Add domain')
+      )
+    );
+  }
+
+  function renderLane(lane,index){
+    const filled=lane.cells.reduce((n,c)=>n+c.slots.filter(s=>s.domain).length,0);
+    const starts=cellStarts(lane);
+    const stretched=lane.cells.length===1&&ncols>1;
+    return h('div',{key:lane.id,className:'bmap-lane'},
+      h('div',{className:'bmap-lane-head'},
+        editing
+          ? h('input',{type:'text',value:lane.name,maxLength:48,
+              placeholder:'Lane name','aria-label':'Lane name',
+              style:{width:230,flexShrink:0,padding:'4px 8px',fontSize:12},
+              onChange:e=>editLane(lane.id,l=>({...l,name:e.target.value}))})
+          : h('span',{className:'bmap-lane-name',style:{flex:1,minWidth:0}},
+              lane.name||'Untitled lane'),
+        h('span',{style:{fontSize:10,color:'var(--faint)',flexShrink:0,
+                         marginLeft:editing?'auto':0}},
+          filled+' domains'),
+        editing&&h(React.Fragment,null,
+          ncols>1&&h('button',{className:'tbtn',
+            title:stretched?'Cut this lane back to one cell per operating model'
+                           :'Stretch this lane across every operating model',
+            onClick:()=>stretched?unstretchLane(lane.id):stretchLane(lane.id)},
+            stretched?'⇔ Unstretch':'⇔ Stretch'),
+          h('button',{className:'bmap-x',title:'Move this lane up',disabled:index===0,
+            onClick:()=>moveLane(lane.id,-1)},'▲'),
+          h('button',{className:'bmap-x',title:'Move this lane down',disabled:index===lanes.length-1,
+            onClick:()=>moveLane(lane.id,1)},'▼'),
+          h('button',{className:'bmap-x',title:'Remove this lane',
+            onClick:()=>removeLane(lane)},'✕'))
+      ),
+      h('div',{className:'bmap-cells',style:{gridTemplateColumns:gridCols}},
+        lane.cells.map((cell,ci)=>renderCell(lane,cell,ci,starts[ci])))
+    );
+  }
+
+  return h('div',{style:{position:'absolute',inset:0,overflow:'auto',
+                         padding:'0 20px 40px',background:'var(--bg)'}},
+    h('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',
+                    paddingTop:16,marginBottom:12}},
+      h('div',{style:{flex:1,minWidth:200}},
+        h('div',{style:{fontSize:13,fontWeight:800,color:'var(--ink)'}},'Business domain map'),
+        h('div',BMAP_HINT,editing
+          ? 'Columns are operating models, lanes run across them. Press “+ Add domain” in a cell, or drag a tile anywhere.'
+          : 'Click a domain to list its entities · click an entity for its details')),
+      h('button',{className:'tbtn '+(editing?'on':''),'aria-pressed':editing,
+        title:'Assign domains to slots and rearrange the lanes and operating models',
+        onClick:()=>{ setEditing(v=>!v); onOpenDomain(null); }},
+        editing?'Done':'Edit map'),
+      editing&&h('button',{className:'tbtn',title:'Add another operating model column',
+        disabled:ncols>=BOARD_COL_CAP,onClick:addColumn},'+ Operating model'),
+      editing&&h('button',{className:'tbtn',title:'Add another lane',
+        disabled:lanes.length>=BOARD_LANE_CAP,onClick:addLane},'+ Lane'),
+      editing&&h('button',{className:'tbtn',
+        title:'Rebuild the lanes from the model’s divisions, keeping the operating models',
+        onClick:()=>{ if(window.confirm('Rebuild the lanes from the model’s divisions? '+
+                                        'The operating model columns are kept; the current lanes are lost.'))
+                        commit({columns,lanes:seedLanes(graphData,ncols)}); }},'Reset lanes')
+    ),
+
+    /* The operating models, once there is more than one to tell apart. It rides
+       above the lanes and lines up with them because it is the same grid at the
+       same inset. */
+    ncols>1&&h('div',{className:'bmap-colhead',style:{gridTemplateColumns:gridCols}},
+      columns.map((col,i)=>h('div',{key:col.id,className:'bmap-colcell'},
+        editing
+          ? h(React.Fragment,null,
+              h('input',{type:'text',value:col.name,maxLength:40,
+                placeholder:'Operating model','aria-label':'Operating model name',
+                style:{flex:1,minWidth:0,padding:'3px 7px',fontSize:11.5},
+                onChange:e=>renameColumn(col.id,e.target.value)}),
+              h('button',{className:'bmap-x',title:i===0?'Already leftmost'
+                  :canSwap(i-1,i)?'Move left':'A lane is stretched across these two columns',
+                disabled:i===0||!canSwap(i-1,i),onClick:()=>moveColumn(i,-1)},'◀'),
+              h('button',{className:'bmap-x',title:i===ncols-1?'Already rightmost'
+                  :canSwap(i,i+1)?'Move right':'A lane is stretched across these two columns',
+                disabled:i===ncols-1||!canSwap(i,i+1),onClick:()=>moveColumn(i,1)},'▶'),
+              h('button',{className:'bmap-x',title:'Remove this operating model',
+                onClick:()=>removeColumn(i)},'✕'))
+          : h('span',{className:'bmap-colname'},col.name||'Untitled')
+      ))
+    ),
+
+    lanes.map(renderLane),
+
+    !lanes.length&&h('div',{style:{textAlign:'center',padding:'40px 0',...BMAP_HINT}},
+      'No lanes yet. Press “Edit map”, then “+ Lane”.'),
+
+    /* Nothing is allowed to vanish silently: a domain that is on no tile is
+       still in the model, so it sits here until it is placed. */
+    editing&&h('div',{style:{marginTop:6}},
+      h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'.06em',
+                      textTransform:'uppercase',color:'var(--muted)',marginBottom:7}},
+        'Not on the map ('+unplaced.length+')'),
+      unplaced.length
+        ? h('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
+            unplaced.map(d=>{
+              const ddata=graphData.domainHierarchy[d]||{};
+              const chip=hueChip(hueOfSlot(ddata.slot||(graphData.domainSlots||{})[d]));
+              return h('span',{key:d,draggable:true,title:'Drag onto a cell',
+                style:{...chip,padding:'4px 9px',borderRadius:20,fontSize:11,
+                       fontWeight:700,cursor:'grab'},
+                ...dragSource({kind:'domain',domain:d})},
+                d.replace(/_/g,' '));
+            }))
+        : h('div',BMAP_HINT,'Every domain in the model is on the map.')),
+
+    !editing&&unplaced.length>0&&h('div',{style:{marginTop:4,...BMAP_HINT}},
+      unplaced.length+' domain'+(unplaced.length===1?' is':'s are')+' not on the map. ',
+      h('button',{className:'loadjson',onClick:()=>setEditing(true)},'Place them'))
+  );
+}
+
 function fmtBytes(n){
   if(!n&&n!==0) return '';
   if(n<1024) return n+' B';
@@ -2009,23 +2644,32 @@ function ThemeControls({theme,onTheme,palette,onPalette}){
   );
 }
 
-function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode,erdCoreOnly,onErdCoreOnly}){
+const VIEW_MODES=[
+  {id:'graph',label:'Graph',title:'The domains and their relationships as a graph'},
+  {id:'erd',label:'ERD',title:'Entity tables with their columns and crow\u2019s-foot relationships'},
+  {id:'board',label:'Domain map',title:'The business domain map \u2014 your own arrangement of the domains'},
+];
+function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,viewMode,onViewMode,erdCoreOnly,onErdCoreOnly}){
+  const erdMode=viewMode==='erd', boardMode=viewMode==='board';
   return h(React.Fragment,null,
-    h('button',{className:'tbtn '+(erdMode?'on':''),title:'Toggle between graph view and ERD view',
-      'aria-pressed':erdMode,onClick:()=>onErdMode(!erdMode)},'Toggle ERD View'),
+    h('div',{className:'seg',role:'group','aria-label':'View'},
+      VIEW_MODES.map(m=>h('button',{key:m.id,className:viewMode===m.id?'on':'',title:m.title,
+        'aria-pressed':viewMode===m.id,onClick:()=>onViewMode(m.id)},m.label))),
     erdMode&&h('label',{className:'tbtn',title:'Show the most connected entities and their relationships',
         style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
       h('input',{type:'checkbox',checked:erdCoreOnly,
         onChange:e=>onErdCoreOnly(e.target.checked),
         style:{cursor:'pointer',margin:0}}),
       'Core entities'),
-    h('label',{className:'tbtn',title:'Show domain grouping boxes',
+    // Both checkboxes below only ever change the cytoscape canvas, so the map,
+    // which has neither grouping boxes nor an intro animation, drops them.
+    !boardMode&&h('label',{className:'tbtn',title:'Show domain grouping boxes',
         style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
       h('input',{type:'checkbox',checked:showDomains,
         onChange:e=>onShowDomains(e.target.checked),
         style:{cursor:'pointer',margin:0}}),
       'Domains'),
-    h('label',{className:'tbtn',title:'Spiral the graph in when a view loads',
+    !boardMode&&h('label',{className:'tbtn',title:'Spiral the graph in when a view loads',
         style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
       h('input',{type:'checkbox',checked:animate,
         onChange:e=>onAnimate(e.target.checked),
@@ -2038,7 +2682,8 @@ function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,erdMode,o
    then the searchable industry picker and every control. `actions` carries the
    graph buttons so this stays presentational and App keeps the cytoscape refs. */
 function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,onLoadJson,
-  showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode,actions}){
+  showDomains,onShowDomains,animate,onAnimate,viewMode,onViewMode,
+  erdCoreOnly,onErdCoreOnly,actions}){
   const gallery=!!manifest;
   const industry=gallery&&sel.industry?findIndustry(manifest,sel.industry):null;
   const versions=industry?(industry.versions||[]).map(v=>v.version):[];
@@ -2147,7 +2792,8 @@ function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,on
         onChange:e=>onSelect({version:e.target.value})},
         versions.map(v=>h('option',{key:v,value:v},v.toUpperCase()))
       ),
-      graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,erdMode,onErdMode}),
+      graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,
+                                     viewMode,onViewMode,erdCoreOnly,onErdCoreOnly}),
       actions
     )
   );
@@ -2906,7 +3552,11 @@ function App(){
 
   // UI state
   const [showDomains,setShowDomains]=useState(true);
-  const [erdMode,setErdMode]=useState(false);
+  /* Three views share the one canvas area: the cytoscape graph, the ERD and the
+     business domain map. `erdMode` stays derived rather than being a second
+     piece of state, so the two can never both be on. */
+  const [viewMode,setViewMode]=useState('graph');
+  const erdMode=viewMode==='erd', boardMode=viewMode==='board';
   const [erdCoreOnly,setErdCoreOnly]=useState(false);
   const [erdZoom,setErdZoom]=useState(1);
   const [animate,setAnimate]=useState(currentAnimate);
@@ -2936,6 +3586,9 @@ function App(){
   // ones for every model this browser has looked at.
   const [picked,setPicked]=useState(()=>new Set());
   const [allViews,setAllViews]=useState(readAllViews);
+  // Domain maps are stored the same way and under the same per-model key.
+  const [allBoards,setAllBoards]=useState(readAllBoards);
+  const [openBoardDomain,setOpenBoardDomain]=useState(null);
   const [sidebarTab,setSidebarTab]=useState('model');
   const [saveOpen,setSaveOpen]=useState(false);
   const [viewName,setViewName]=useState('');
@@ -2976,6 +3629,7 @@ function App(){
       setPicked(new Set());
       setSaveOpen(false);
       setEditingViewId(null);
+      setOpenBoardDomain(null);
       setSidebarTab('model');
     }catch(e){
       setLoadError('Error processing model: '+e.message);
@@ -3312,6 +3966,33 @@ function App(){
   const saveViews=useCallback(next=>{
     setAllViews(prev=>{ const all={...prev,[modelKey]:next}; writeAllViews(all); return all; });
   },[modelKey]);
+
+  /* ── Business domain map ───────────────────────────────
+     A model that has never been mapped falls back to the seed rather than
+     writing one, so a model only takes up localStorage once it has actually
+     been arranged by hand. */
+  const board=useMemo(()=>
+    graphData?normaliseBoard(allBoards[modelKey],graphData):{lanes:[]},
+    [allBoards,modelKey,graphData]);
+  const saveBoard=useCallback(next=>{
+    setAllBoards(prev=>{ const all={...prev,[modelKey]:next}; writeAllBoards(all); return all; });
+  },[modelKey]);
+  const switchView=useCallback(mode=>{
+    setViewMode(mode);
+    gcEvent('view-mode-'+mode,'View mode: '+mode);
+  },[]);
+  // Clicking an entity on the map fills the details panel and nothing else: the
+  // map is not a filter of the graph, so navigate() would throw away the view
+  // the reader is standing in.
+  const showBoardEntity=useCallback(fid=>{
+    setTreeClick({type:'table',value:fid});
+    setSelectedNode(null); setSelectedEdge(null);
+  },[]);
+  const openBoardTile=useCallback(dname=>{
+    setOpenBoardDomain(dname);
+    setSelectedNode(null); setSelectedEdge(null);
+    setTreeClick(dname?{type:'domain',value:dname}:null);
+  },[]);
 
   const togglePick=useCallback(id=>{
     setPicked(prev=>{ const next=new Set(prev); next.has(id)?next.delete(id):next.add(id); return next; });
@@ -3814,11 +4495,11 @@ function App(){
       onJump:openCmd,
       onLoadJson:handleLoadJsonFile,
       showDomains,onShowDomains:setShowDomains,animate,onAnimate:setAnimate,
-      erdMode,onErdMode:setErdMode,erdCoreOnly,onErdCoreOnly:setErdCoreOnly,
+      viewMode,onViewMode:switchView,erdCoreOnly,onErdCoreOnly:setErdCoreOnly,
       actions:h(React.Fragment,null,
         // Graph controls do nothing without a graph, so they stay hidden until
         // one is loaded rather than sitting there inert.
-        graphData&&h(React.Fragment,null,
+        graphData&&!boardMode&&h(React.Fragment,null,
           h('button',{className:'tbtn icononly',title:'Zoom out','aria-label':'Zoom out',
             onClick:()=>erdMode?setErdZoom(z=>Math.max(0.5,z*0.8)):cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*0.8)},
             h(ToolbarIcon,{name:'zoomOut'})),
@@ -3940,7 +4621,7 @@ function App(){
 
         // Back button — present in any view other than the full model view; each
         // press walks back one level until the full model is reached.
-        filterState.type&&h('button',{
+        filterState.type&&!boardMode&&h('button',{
           onClick:goBack,
           style:{position:'absolute',top:15,left:15,zIndex:1000,padding:'9px 16px',
                  background:'var(--card)',color:'var(--ink)',border:'1px solid var(--line-strong)',borderRadius:9,
@@ -3948,7 +4629,7 @@ function App(){
         },'← Back'),
 
         // Filter info badge
-        filterInfoText&&h('div',{style:{position:'absolute',top:15,right:15,zIndex:1000,
+        filterInfoText&&!boardMode&&h('div',{style:{position:'absolute',top:15,right:15,zIndex:1000,
                                         padding:'7px 13px',background:'var(--g-amber-tile)',
                                         border:'1px solid var(--g-amber-bd)',
                                         color:'var(--g-amber-ink)',borderRadius:9,fontSize:12,fontWeight:650}},
@@ -4001,7 +4682,16 @@ function App(){
           selectedEdgeId:selectedEdge&&selectedEdge.id,
           onTableClick:handleClickTable,
           onEdgeClick:data=>{setSelectedEdge(data);setSelectedNode(null);setTreeClick(null);}}),
-        h('div',{ref:containerRef,style:{width:'100%',height:'100%',display:graphData&&!erdMode?'block':'none'}})
+
+        // The business domain map: hand-arranged lanes of domains, whose shape
+        // is the reader's rather than the model's.
+        boardMode&&graphData&&h(DomainBoardView,{graphData,board,onBoard:saveBoard,
+          openDomain:openBoardDomain,onOpenDomain:openBoardTile,
+          onEntityClick:showBoardEntity,
+          selectedEntityId:treeClick&&treeClick.type==='table'?treeClick.value:null}),
+
+        h('div',{ref:containerRef,style:{width:'100%',height:'100%',
+          display:graphData&&!erdMode&&!boardMode?'block':'none'}})
       ),
 
       // Right panel

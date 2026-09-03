@@ -123,6 +123,12 @@ Open the app URL. You have two ways to load any model from this repo:
 
 **Custom views** — an industry model can run to hundreds of tables, and a given conversation is usually about a dozen of them. Tick the products you want in the left-hand tree (a domain's box ticks everything listed under it, and the details panel has an **★ Add to selection** button for the product you are looking at), then **Preview** the subset or **Save view…** it under a name. Saved views live under the **★ Views** tab: opening one draws just those products, the domain boxes they belong to, and every foreign key running between them — in the graph and in the ERD view alike. Views are stored in your own browser (`localStorage`), per model, and are never uploaded anywhere.
 
+**Business domain map** — the third view in the top-right switch (**Graph · ERD · Domain map**) lays the model out the way the business talks about it rather than the way the graph does. It is a grid: **columns are operating models**, **lanes are the rows** that run across them, and a lane is cut into cells that each cover one or more columns — so a lane that means the same thing everywhere can be **stretched** the whole way across while the lane above it stays split per operating model. Each cell holds tiles, and each tile points at one domain.
+
+The first time you open a model you get one operating model and one lane per `division`. Press **Edit map** to shape it: **+ Operating model** and **+ Lane** add columns and rows, **⇔ Stretch / ⇔ Unstretch** spans a whole lane, **Merge → / Split** on a cell adjusts the span one column at a time, and **+ Add domain** inside a cell either opens a dropdown or accepts a tile dragged onto it. Tiles drag between cells and lanes; anything not yet placed waits in the **Not on the map** tray at the bottom. **Reset lanes** rebuilds the rows from the model's divisions and keeps your operating models.
+
+Outside edit mode, clicking a tile expands it in place to list that domain's entities grouped by sub-domain, and clicking an entity fills the details panel with its attributes and foreign keys. Like custom views, the arrangement is kept per model in your own browser (`localStorage`) and never uploaded.
+
 ---
 
 ## How models are generated
