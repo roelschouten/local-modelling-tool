@@ -91,6 +91,10 @@ The fastest way to explore a model visually is the **model-viewer app**, a **Dat
 
 **Core entities** narrows a large model to the most connected fifth of its entities (at least twelve) and the relationships between them, which is usually the readable starting point on a full ECM. The ERD also honours wherever you have navigated to: drill into a domain and switch to ERD and you get an ERD of that domain, and clicking a single entity centres it with everything it references around it.
 
+**Custom views** — an industry model runs to hundreds of tables and a given conversation is usually about a dozen of them. Tick the data products you want in the left-hand tree — a domain's own tick box takes everything listed under it and shows a mixed state while only some are in — or add the one you are looking at with **★ Add to selection** in the details panel. A footer then offers **Preview**, which draws just that subset without saving, and **Save view…**, which stores it under a name.
+
+Saved views live under the **★ Views** tab: the name opens one, the pencil loads it back into the tick boxes to be re-cut, the cross deletes it. Opening a view draws the picked products, the domain boxes they happen to come from, and every foreign key running between two of them — in the graph and in the ERD alike, so a saved subset is readable either way. Views are kept per model in your own browser (`localStorage`), capped at 60 per model, and are never uploaded anywhere.
+
 
 ### Deploying a model into Unity Catalog
 

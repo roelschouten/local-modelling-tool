@@ -1346,7 +1346,8 @@ async function apiFetch(url){
 
 // ── Tree Component ─────────────────────────────────────────
 const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
-                      onToggleDomain,onToggleTable,onClickDomain,onClickTable,onClickAttr,searchTerm})=>{
+                      onToggleDomain,onToggleTable,onClickDomain,onClickTable,onClickAttr,searchTerm,
+                      picked,onTogglePick,onTogglePickMany})=>{
   const {color,tables={},subdomains={},division=''}=domainData;
   const isExpanded=expandedDomains.has(domainName);
   const tableEntries=useMemo(()=>Object.entries(tables).sort((a,b)=>a[0].localeCompare(b[0])),[tables]);
@@ -1369,6 +1370,12 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
     const isTblExp=expandedTables.has(fullId);
     return h('div',{key:fullId,style:{marginLeft:indent,marginBottom:1}},
       h('div',{className:'tree-item',style:{display:'flex',alignItems:'center',padding:'4px 0',cursor:'pointer'}},
+        h('input',{type:'checkbox',checked:picked.has(fullId),
+          title:picked.has(fullId)?'Remove from selection':'Add to selection',
+          'aria-label':'Select '+tname,
+          onClick:e=>e.stopPropagation(),
+          onChange:()=>onTogglePick(fullId),
+          style:{width:13,height:13,margin:'0 5px 0 0',flexShrink:0}}),
         h('button',{
           onClick:e=>{e.stopPropagation();onToggleTable(fullId);},
           style:{width:18,height:18,padding:0,background:'transparent',border:'1px solid var(--line)',
@@ -1404,9 +1411,23 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
     );
   }
 
+  // Domain-level tick box: ticks or clears every product currently listed under
+  // it, and shows the mixed state while only some of them are in the selection.
+  const domainIds=visibleTables.map(([tn,td])=>td.full_id||`${domainName}.${tn}`);
+  const domainPicked=domainIds.filter(id=>picked.has(id)).length;
+  const domainAll=domainIds.length>0&&domainPicked===domainIds.length;
+
   return h('div',{style:{marginBottom:2}},
     h('div',{className:'tree-item'},
       h('div',{style:{display:'flex',alignItems:'center',padding:'6px 0'}},
+        h('input',{type:'checkbox',checked:domainAll,
+          ref:el=>{if(el)el.indeterminate=domainPicked>0&&!domainAll;},
+          title:domainAll?'Remove every product listed here from the selection'
+                         :'Add every product listed here to the selection',
+          'aria-label':'Select all of '+domainName,
+          onClick:e=>e.stopPropagation(),
+          onChange:()=>onTogglePickMany(domainIds,!domainAll),
+          style:{width:13,height:13,margin:'0 6px 0 0',flexShrink:0}}),
         h('button',{
           onClick:e=>{e.stopPropagation();onToggleDomain(domainName);},
           style:{width:20,height:20,padding:0,background:'transparent',border:'1px solid var(--line-strong)',
@@ -1450,7 +1471,8 @@ const TreeNode=memo(({domainName,domainData,expandedDomains,expandedTables,
 });
 
 // ── Node Info Panel ────────────────────────────────────────
-function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSizes,setDomainSizes,filterState}){
+function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSizes,setDomainSizes,filterState,
+                        picked,onTogglePick}){
   if(!graphData) return h('div',{style:{padding:'15px'}},
     h('h3',{className:'section-header',style:{borderBottom:'1px solid var(--line)',paddingBottom:10,marginBottom:15}},'📌 Details'),
     h('p',{style:{color:'var(--muted)',fontSize:12,fontStyle:'italic'}},'Click a node to see details'),
@@ -1652,6 +1674,9 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
     const fkAttrs=attrs.filter(a=>a.fk&&!a.pk);
     const otherAttrs=attrs.filter(a=>!a.pk&&!a.fk);
     const sortedAttrs=[...pkAttrs,...fkAttrs,...otherAttrs];
+    // The tree is not the only way in: a product reached by clicking round the
+    // graph can be added to the selection from right here.
+    const isPicked=!!(picked&&picked.has(nodeData.id));
     return h('div',{style:{padding:'15px',display:'flex',flexDirection:'column',height:'100%'}},
       h('div',{style:{display:'flex',alignItems:'center',marginBottom:10}},
         h('div',{style:{width:20,height:20,background:nodeData.color,borderRadius:'50%',marginRight:10,
@@ -1668,6 +1693,11 @@ function NodeInfoPanel({selectedNode,selectedEdge,treeClick,graphData,domainSize
         tags.length>0&&h('span',{style:{color:'var(--g-violet-line)',fontSize:11}},
           '🏷️ '+tags.length+' tags'),
       ),
+      onTogglePick&&h('button',{className:isPicked?'btn btn-accent':'btn',
+        title:isPicked?'Remove this product from the selection':'Add this product to the selection',
+        style:{width:'100%',marginBottom:10},
+        onClick:()=>onTogglePick(nodeData.id)},
+        isPicked?'\u2713 In selection':'\u2605 Add to selection'),
       nodeData.description&&h('p',{style:{
         color:'var(--ink)',fontSize:13,lineHeight:1.6,marginBottom:12,padding:8,
         background:'var(--veil)',borderRadius:4,
@@ -1750,6 +1780,66 @@ function readStoredSel(){
 }
 function writeStoredSel(sel){
   try{ localStorage.setItem(SEL_LS_KEY,JSON.stringify(sel)); }catch(_){}
+}
+
+/* ── Custom views ─────────────────────────────────────────
+   A custom view is a hand-picked set of data products saved under a name, so a
+   900-table industry model can be cut down to the dozen entities one
+   conversation is actually about. They are held per model in this browser's
+   localStorage and never leave it. */
+const VIEWS_LS_KEY='dbx-model-views';
+const VIEWS_CAP=60;              // per model — a guard on the localStorage budget
+
+function readAllViews(){
+  try{
+    const raw=localStorage.getItem(VIEWS_LS_KEY);
+    if(!raw) return {};
+    const o=JSON.parse(raw);
+    return (o&&typeof o==='object'&&!Array.isArray(o))?o:{};
+  }catch(_){ return {}; }
+}
+function writeAllViews(all){
+  try{ localStorage.setItem(VIEWS_LS_KEY,JSON.stringify(all)); }catch(_){}
+}
+/* The key a model's views hang off. A gallery model has a stable
+   industry/version/flavour triple; a hand-loaded file only has its own name, so
+   its views are keyed by that instead. */
+function modelViewKey(sel,graphData,localModel){
+  if(!graphData) return '';
+  if(localModel||!sel||!sel.industry) return 'file:'+(graphData.sourceLabel||graphData.modelName||'model');
+  return [sel.industry,sel.version||'latest',sel.flavour||'ecm'].join('/');
+}
+function newViewId(){ return 'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+const VIEW_ROW_BTN={width:20,height:20,padding:0,flexShrink:0,background:'transparent',
+  border:'1px solid transparent',borderRadius:4,color:'var(--muted)',cursor:'pointer',
+  fontSize:10,lineHeight:'18px'};
+
+/* The Views tab: every saved subset for the model on screen. The name opens it
+   in the graph, the pencil loads it back into the tick-boxes so it can be
+   re-cut, and the cross deletes it. */
+function CustomViewsPanel({views,activeViewId,onOpen,onEdit,onDelete}){
+  if(!views.length) return h('div',{style:{textAlign:'center',paddingTop:26}},
+    h('div',{style:{fontSize:28,marginBottom:10,color:'var(--m-gold)'}},'\u2605'),
+    h('p',{style:{color:'var(--muted)',fontSize:12,fontWeight:650,marginBottom:6}},'No custom views yet'),
+    h('p',{style:{color:'var(--faint)',fontSize:10.5,lineHeight:1.5}},
+      'On the Model tab, tick the data products you care about and press \u201cSave view\u201d. Views are stored in this browser only.')
+  );
+  return h('div',{},
+    views.map(v=>h('div',{key:v.id,className:'tree-item',
+        style:{display:'flex',alignItems:'center',gap:4,padding:'5px 4px',marginBottom:1,
+               background:v.id===activeViewId?'var(--brand-wash)':'transparent'}},
+      h('span',{style:{fontSize:10,color:'var(--m-gold)',flexShrink:0}},'\u2605'),
+      h('button',{title:'Open '+v.name,onClick:()=>onOpen(v),
+        style:{flex:1,minWidth:0,textAlign:'left',background:'transparent',border:0,cursor:'pointer',
+               padding:2,fontSize:11.5,fontWeight:650,
+               color:v.id===activeViewId?'var(--brand)':'var(--ink)',
+               overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},v.name),
+      h('span',{style:{fontSize:9,color:'var(--faint)',flexShrink:0}},'('+(v.tables||[]).length+')'),
+      h('button',{title:'Edit this view\u2019s contents',onClick:()=>onEdit(v),style:VIEW_ROW_BTN},'\u270e'),
+      h('button',{title:'Delete this view',onClick:()=>onDelete(v),style:VIEW_ROW_BTN},'\u2715')
+    ))
+  );
 }
 
 function fmtBytes(n){
@@ -2131,6 +2221,8 @@ const TOUR_STEPS=[
     body:'The model is grouped into business domains, colour-coded here. Click a domain name to filter the graph down to just that domain, or the + to drill into its tables.'},
   {target:'graph-node',place:'bottom',title:'Explore the graph',
     body:'Every circle is a data product (a table). Click one to see its columns and keys in the panel on the right. Double-click to drill into just that table and its foreign-key neighbours.'},
+  {target:'views',place:'right',title:'Build your own view',
+    body:'Tick the products you care about in the tree \u2014 or add the one you are looking at from the details panel \u2014 then save the selection as a named view. Views live under the \u2605 Views tab, in this browser only.'},
   {target:'download',place:'bottom',title:'Download the model',
     body:'Export the whole model as an Excel workbook — every table, column, data type and key — ready to share or hand to your data team.'},
   {target:'repo',place:'bottom',title:'Open the model & install it',
@@ -2561,6 +2653,9 @@ function SqlDbmErdView({graphData,filterState,erdCoreOnly,showDomains,erdZoom,se
       (degree[b.id]||0)-(degree[a.id]||0)||a.id.localeCompare(b.id)
     ).slice(0,Math.max(12,Math.ceil(modelTables.length*0.2))).map(table=>table.id));
   }
+  if(filterState.type==='custom'&&filterState.value&&Array.isArray(filterState.value.tables)){
+    visibleIds=new Set(filterState.value.tables);
+  }
   const focusId=filterState.type==='table'?filterState.value:null;
   if(focusId){
     const directEdges=(graphData.edges||[]).filter(edge=>edge.data.source===focusId);
@@ -2837,6 +2932,14 @@ function App(){
   const [progress,setProgress]=useState(null);
   const [cmdOpen,setCmdOpen]=useState(false);
   const [localModel,setLocalModel]=useState(false);
+  // Custom views: `picked` is the live tick-box selection, `allViews` the saved
+  // ones for every model this browser has looked at.
+  const [picked,setPicked]=useState(()=>new Set());
+  const [allViews,setAllViews]=useState(readAllViews);
+  const [sidebarTab,setSidebarTab]=useState('model');
+  const [saveOpen,setSaveOpen]=useState(false);
+  const [viewName,setViewName]=useState('');
+  const [editingViewId,setEditingViewId]=useState(null);
   const modelCache=useRef(new Map());
   const loadTokenRef=useRef(0);
 
@@ -2868,6 +2971,12 @@ function App(){
       setSelectedNode(null);
       setSelectedEdge(null);
       setTreeClick(null);
+      // Product ids only mean anything within one model, so a new model starts
+      // with an empty selection.
+      setPicked(new Set());
+      setSaveOpen(false);
+      setEditingViewId(null);
+      setSidebarTab('model');
     }catch(e){
       setLoadError('Error processing model: '+e.message);
     }
@@ -3194,6 +3303,77 @@ function App(){
 
   const openCmd=useCallback(()=>{ gcEvent('search-open','Open industry search'); setCmdOpen(true); },[]);
 
+  // ── Custom views ───────────────────────────────────────
+  const modelKey=useMemo(()=>modelViewKey(sel,graphData,localModel),[sel,graphData,localModel]);
+  const myViews=useMemo(()=>allViews[modelKey]||[],[allViews,modelKey]);
+  // Which saved view is on screen is not separate state: the graph filter
+  // already says so, and deriving it keeps the two from drifting apart.
+  const activeViewId=filterState.type==='custom'&&filterState.value?filterState.value.id:null;
+  const saveViews=useCallback(next=>{
+    setAllViews(prev=>{ const all={...prev,[modelKey]:next}; writeAllViews(all); return all; });
+  },[modelKey]);
+
+  const togglePick=useCallback(id=>{
+    setPicked(prev=>{ const next=new Set(prev); next.has(id)?next.delete(id):next.add(id); return next; });
+  },[]);
+  const togglePickMany=useCallback((ids,on)=>{
+    setPicked(prev=>{ const next=new Set(prev); ids.forEach(id=>on?next.add(id):next.delete(id)); return next; });
+  },[]);
+  const clearPick=useCallback(()=>{
+    setPicked(new Set()); setSaveOpen(false); setEditingViewId(null);
+  },[]);
+
+  const showCustom=useCallback((id,name,tables)=>{
+    setSelectedNode(null); setSelectedEdge(null); setTreeClick(null);
+    navigate({type:'custom',value:{id,name,tables}});
+  },[navigate]);
+  const openCustomView=useCallback(v=>{
+    gcEvent('view-open','Open custom view');
+    showCustom(v.id,v.name,v.tables||[]);
+  },[showCustom]);
+  const previewPick=useCallback(()=>{
+    gcEvent('view-preview','Preview selection');
+    showCustom('__selection','Selection',[...picked]);
+  },[showCustom,picked]);
+
+  const beginSave=useCallback(()=>{
+    const existing=editingViewId?myViews.find(v=>v.id===editingViewId):null;
+    setViewName(existing?existing.name:'View '+(myViews.length+1));
+    setSaveOpen(true);
+  },[editingViewId,myViews]);
+
+  const commitSave=useCallback(()=>{
+    const tables=[...picked];
+    if(!tables.length) return;
+    const name=(viewName||'').trim()||('View '+(myViews.length+1));
+    const existing=editingViewId&&myViews.find(v=>v.id===editingViewId);
+    const saved=existing?{...existing,name,tables}
+                        :{id:newViewId(),name,tables,created:Date.now()};
+    // The cap trims the oldest so a long session cannot fill localStorage; an
+    // edit rewrites in place and never trims.
+    saveViews(existing?myViews.map(v=>v.id===existing.id?saved:v)
+                      :[...myViews,saved].slice(-VIEWS_CAP));
+    gcEvent(existing?'view-update':'view-save',existing?'Update custom view':'Save custom view');
+    setSaveOpen(false); setEditingViewId(null); setPicked(new Set());
+    setSidebarTab('views');
+    showCustom(saved.id,saved.name,saved.tables);
+  },[picked,viewName,myViews,editingViewId,saveViews,showCustom]);
+
+  const editCustomView=useCallback(v=>{
+    setPicked(new Set(v.tables||[]));
+    setEditingViewId(v.id); setViewName(v.name); setSaveOpen(true);
+    setSidebarTab('model');
+  },[]);
+
+  const deleteCustomView=useCallback(v=>{
+    if(!window.confirm('Delete the view \u201c'+v.name+'\u201d?')) return;
+    saveViews(myViews.filter(x=>x.id!==v.id));
+    if(editingViewId===v.id){ setEditingViewId(null); setSaveOpen(false); }
+    // Deleting the view that is on screen would leave the graph showing
+    // something that no longer exists, so fall back to the whole model.
+    if(activeViewId===v.id){ setFilterState({type:null,value:null}); setNavHistory([]); }
+  },[myViews,saveViews,activeViewId,editingViewId]);
+
   // ── Graph elements computation ─────────────────────────
   const graphElements=useMemo(()=>{
     if(!graphData||!graphIndexes) return [];
@@ -3215,6 +3395,7 @@ function App(){
         return score||String(a.data.label).localeCompare(String(b.data.label));
       }).slice(0,Math.max(12,Math.ceil(tableNodes.length*0.2))).map(n=>n.data.id));
       let visibleIds=erdCoreOnly?coreIds:new Set(tableNodes.map(n=>n.data.id));
+      if(type==='custom'&&value&&Array.isArray(value.tables)) visibleIds=new Set(value.tables);
       let focusId=null;
       if(type==='table'&&value){
         focusId=value;
@@ -3237,6 +3418,30 @@ function App(){
       }
       return el;
     });
+
+    /* A custom view: only the hand-picked products, wrapped in whichever domain
+       boxes they happen to come from, plus every FK that runs between two of
+       them. Domain width/height are stripped so each box auto-wraps the few
+       children it has left rather than sitting at its full-model size. */
+    if(type==='custom'&&value&&Array.isArray(value.tables)){
+      const ids=new Set(value.tables);
+      const relDomains=new Set();
+      const result=[];
+      value.tables.forEach(id=>{
+        const n=tableById[id];
+        if(!n) return;                       // saved before the model changed under it
+        relDomains.add(n.data.domain);
+        result.push({...n,classes:'table-node domain-view-node'});
+      });
+      [...relDomains].filter(Boolean).sort().forEach(d=>{
+        const n=domainByName[d];
+        if(!n) return;
+        const {width,height,...data}=n.data||{};
+        result.push({...n,data,classes:'domain-node fk-domain'});
+      });
+      edges.forEach(e=>{ if(ids.has(e.data.source)&&ids.has(e.data.target)) result.push(e); });
+      return result;
+    }
 
     if(type==='table'&&value){
       const tid=value;
@@ -3435,8 +3640,9 @@ function App(){
           node.position({x:r*Math.cos(angle), y:r*Math.sin(angle)});
         });
       }
-    } else if(type==='domain'){
-      // Circular grouped by subdomain — compound parents auto-wrap; dragging box moves products
+    } else if(type==='domain'||type==='custom'){
+      // Circular grouped by subdomain (or, in a custom view, by domain) —
+      // compound parents auto-wrap; dragging box moves products
       const tblNodes=cy.nodes('.domain-view-node').sort((a,b)=>{
         const pa=(a.data('parent')||''), pb=(b.data('parent')||'');
         return pa<pb?-1:pa>pb?1:0;
@@ -3498,7 +3704,8 @@ function App(){
     // destination, nor once the viewer has taken the viewport. The view is only
     // marked as introduced once a move actually starts, so a fit that landed on a
     // not-yet-measured viewport leaves the next one free to try again.
-    const viewKey=`${erdMode?'erd:':''}${type||''}::${filterState.value||''}`;
+    const fv=filterState.value;
+    const viewKey=`${erdMode?'erd:':''}${type||''}::${fv&&typeof fv==='object'?JSON.stringify(fv):(fv||'')}`;
     const introduced=()=>lastFitKeyRef.current.graph===graphData&&lastFitKeyRef.current.key===viewKey;
     const mark=()=>{lastFitKeyRef.current={graph:graphData,key:viewKey};};
     const camFree=()=>!viewerTookOverRef.current&&(!introRef.current||introRef.current.finished);
@@ -3555,6 +3762,7 @@ function App(){
     if(type==='table'&&value){
       return `📊 ${value}`;
     }
+    if(type==='custom'&&value) return `\u2605 ${value.name||'Custom view'} \u00b7 ${(value.tables||[]).length}`;
     if(type==='domain'&&value) return `Domain: ${value}`;
     if(type==='edge'&&typeof value==='object') return `🔗 ${(value.source||'').split('.').pop()}.${value.source_column||''} → ${(value.target||'').split('.').pop()}.${value.target_column||''}`;
     if(type==='attribute'&&value) return `📊 ${(value||'').split('.').slice(1).join('.')}`;
@@ -3643,37 +3851,85 @@ function App(){
     // ── Main body ────────────────────────────────────────
     h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
 
-      // Left sidebar: the model outline.
-      h('div',{'data-tour':'domains',style:{width:250,background:'var(--card)',borderRight:'1px solid var(--line)',
-                      display:'flex',flexDirection:'column',flexShrink:0}},
-        h('div',{style:{padding:'12px 15px 0',flexShrink:0}},
-          graphData&&h('button',{className:'btn',
-              title:'Reset to the full model view',
-              disabled:!filterState.type,
-              style:{width:'100%',justifyContent:'center',marginBottom:8},
-              onClick:()=>{
-                gcEvent('full-model-view','Full model view');
-                setFilterState({type:null,value:null});setNavHistory([]);
-                setTimeout(()=>cyRef.current&&cyRef.current.fit(50),100);
-              }},
-            '⌂ Full Model View'),
-          h('input',{type:'text',placeholder:'Search domains, tables...',
-                     value:searchTerm,onChange:e=>setSearchTerm(e.target.value),
-                     style:{marginBottom:6}})
+      // Left sidebar: the model outline on one tab, the saved custom views on
+      // the other, and the live tick-box selection pinned to the bottom.
+      h('div',{'data-tour':'domains',style:{width:268,background:'var(--card)',borderRight:'1px solid var(--line)',
+                      display:'flex',flexDirection:'column',flexShrink:0,minHeight:0}},
+        graphData&&h('div',{'data-tour':'views',className:'seg',
+                            style:{display:'flex',margin:'12px 15px 0',flexShrink:0}},
+          h('button',{className:sidebarTab==='model'?'on':'',style:{flex:1},
+            onClick:()=>setSidebarTab('model')},'Model'),
+          h('button',{className:sidebarTab==='views'?'on':'',style:{flex:1},
+            title:'Your saved subsets of this model',
+            onClick:()=>{gcEvent('views-tab','Custom views tab');setSidebarTab('views');}},
+            '★ Views'+(myViews.length?' ('+myViews.length+')':''))
         ),
-        h('p',{style:{color:'var(--faint)',fontSize:10,margin:'0 15px 6px',padding:0}},'Click + to expand, click name to view'),
-        h('div',{style:{flex:1,overflowY:'auto',padding:'0 15px 15px'}},
+        sidebarTab==='model'&&h(React.Fragment,null,
+          h('div',{style:{padding:'12px 15px 0',flexShrink:0}},
+            graphData&&h('button',{className:'btn',
+                title:'Reset to the full model view',
+                disabled:!filterState.type,
+                style:{width:'100%',justifyContent:'center',marginBottom:8},
+                onClick:()=>{
+                  gcEvent('full-model-view','Full model view');
+                  setFilterState({type:null,value:null});setNavHistory([]);
+                  setTimeout(()=>cyRef.current&&cyRef.current.fit(50),100);
+                }},
+              '⌂ Full Model View'),
+            h('input',{type:'text',placeholder:'Search domains, tables...',
+                       value:searchTerm,onChange:e=>setSearchTerm(e.target.value),
+                       style:{marginBottom:6}})
+          ),
+          h('p',{style:{color:'var(--faint)',fontSize:10,margin:'0 15px 6px',padding:0}},
+            'Click + to expand · a name to view · tick to collect')
+        ),
+        h('div',{style:{flex:1,minHeight:0,overflowY:'auto',padding:'12px 15px 15px'}},
           !graphData&&h('div',{style:{textAlign:'center',paddingTop:30}},
             h('div',{style:{fontSize:32,marginBottom:10}},'📊'),
             h('p',{style:{color:'var(--faint)',fontSize:12}},'No model loaded')
           ),
-          graphData&&sortedDomains.map(([dname,ddata])=>
+          graphData&&sidebarTab==='model'&&sortedDomains.map(([dname,ddata])=>
             h(TreeNode,{key:dname,domainName:dname,domainData:ddata,
                         expandedDomains,expandedTables,searchTerm,
                         onToggleDomain:handleToggleDomain,onToggleTable:handleToggleTable,
                         onClickDomain:handleClickDomain,onClickTable:handleClickTable,
-                        onClickAttr:handleClickAttr})
-          )
+                        onClickAttr:handleClickAttr,
+                        picked,onTogglePick:togglePick,onTogglePickMany:togglePickMany})
+          ),
+          graphData&&sidebarTab==='views'&&h(CustomViewsPanel,{
+            views:myViews,activeViewId,
+            onOpen:openCustomView,onEdit:editCustomView,onDelete:deleteCustomView})
+        ),
+
+        // Selection tray — only in the way once something is actually ticked.
+        graphData&&picked.size>0&&h('div',{style:{flexShrink:0,borderTop:'1px solid var(--line)',
+                        background:'var(--well)',padding:'10px 15px'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
+            h('span',{style:{flex:1,fontSize:11,fontWeight:700,color:'var(--ink)'}},
+              picked.size+(picked.size===1?' product selected':' products selected')),
+            h('button',{className:'tbtn',title:'Clear the selection',onClick:clearPick},'Clear')
+          ),
+          saveOpen
+            ? h('form',{onSubmit:e=>{e.preventDefault();commitSave();}},
+                h('input',{type:'text',value:viewName,autoFocus:true,
+                  placeholder:'Name this view',maxLength:60,
+                  onChange:e=>setViewName(e.target.value),
+                  style:{width:'100%',marginBottom:6}}),
+                h('div',{style:{display:'flex',gap:6}},
+                  h('button',{type:'submit',className:'btn btn-accent',style:{flex:1}},
+                    editingViewId?'Update view':'Save view'),
+                  h('button',{type:'button',className:'btn',
+                    onClick:()=>{setSaveOpen(false);setEditingViewId(null);}},'Cancel')
+                )
+              )
+            : h('div',{style:{display:'flex',gap:6}},
+                h('button',{className:'btn',style:{flex:1},
+                  title:'Show just these products in the graph, without saving',
+                  onClick:previewPick},'Preview'),
+                h('button',{className:'btn btn-accent',style:{flex:1},
+                  title:'Store this selection under a name',
+                  onClick:beginSave},editingViewId?'Update…':'Save view…')
+              )
         )
       ),
 
@@ -3755,7 +4011,8 @@ function App(){
           selectedNode:treeClick?null:selectedNode,
           selectedEdge:treeClick?null:selectedEdge,
           treeClick,graphData,
-          domainSizes,setDomainSizes,filterState
+          domainSizes,setDomainSizes,filterState,
+          picked,onTogglePick:togglePick
         })
       )
     ),
