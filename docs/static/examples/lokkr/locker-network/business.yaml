@@ -1,0 +1,175 @@
+# Lokkr (fictional automated parcel-locker company) - domain: locker-network
+# Example model for the viewer's Concepts / Processes views.
+
+apiVersion: data-architecture/model/v1
+kind: BusinessModel
+metadata:
+  domain: locker-network
+  name: Locker Network
+  version: 1.2.0
+  status: agreed
+  owner:
+    team: Network Operations
+    dataOwner: Head of Network Operations
+  description: 'The physical locker estate: where Lokkr has lockers, what they consist of, and when they
+    cannot be used.'
+  changelog:
+  - version: 1.2.0
+    change: Added metric available-compartment-hours (consumed by parcel-handling).
+  - version: 1.1.0
+    change: Added bank-outage entity and bank-availability KPI.
+  - version: 1.0.0
+    change: Initial model.
+dependsOn: {}
+concepts:
+- id: site-host
+  kind: entity
+  name: Site Host
+  definition: An organisation that provides physical space for a locker site under a hosting agreement,
+    such as a supermarket, petrol station or municipality.
+  identifiedBy: Chamber of Commerce number of the hosting organisation
+  aliases:
+    en:
+    - host partner
+    - location partner
+  status: agreed
+- id: locker-site
+  kind: entity
+  name: Locker Site
+  definition: A physical address where one or more locker banks are installed and publicly reachable.
+  identifiedBy: Site code (e.g. UTR-0142)
+  aliases:
+    en:
+    - locker location
+    - pick-up point
+  lifecycle:
+  - planned
+  - live
+  - suspended
+  - closed
+  status: agreed
+- id: locker-bank
+  kind: entity
+  name: Locker Bank
+  definition: A connected assembly of compartments driven by one controller unit; the unit that is installed,
+    serviced and monitored as a whole.
+  identifiedBy: Controller serial number
+  aliases:
+    en:
+    - locker
+    - locker unit
+    - cabinet
+  lifecycle:
+  - installed
+  - in-service
+  - out-of-service
+  - decommissioned
+  status: agreed
+- id: compartment
+  kind: entity
+  name: Compartment
+  definition: A single lockable door in a locker bank that holds at most one parcel at a time.
+  identifiedBy: Controller serial number + door number
+  aliases:
+    en:
+    - door
+    - slot
+    - box
+  classifiedBy:
+    sizeClass:
+    - S
+    - M
+    - L
+    - XL
+  status: agreed
+- id: bank-outage
+  kind: event
+  name: Bank Outage
+  definition: A period in which a locker bank cannot accept or release parcels, whatever the cause (power,
+    connectivity, vandalism, planned maintenance).
+  identifiedBy: Outage reference
+  occursAt: From start to end of the outage
+  status: agreed
+relationships:
+- id: host-provides-site
+  ends:
+  - concept: site-host
+    role: provides
+    cardinality: 1..1
+  - concept: locker-site
+    role: is provided by
+    cardinality: 1..*
+- id: site-contains-bank
+  ends:
+  - concept: locker-site
+    role: contains
+    cardinality: 1..1
+  - concept: locker-bank
+    role: is installed at
+    cardinality: 1..*
+- id: bank-consists-of-compartment
+  ends:
+  - concept: locker-bank
+    role: consists of
+    cardinality: 1..1
+  - concept: compartment
+    role: is part of
+    cardinality: 1..*
+- id: outage-affects-bank
+  ends:
+  - concept: bank-outage
+    role: affects
+    cardinality: 0..*
+  - concept: locker-bank
+    role: is affected by
+    cardinality: 1..1
+metrics:
+- id: scheduled-bank-hours
+  name: Scheduled bank hours
+  definition: Hours in the period in which in-service locker banks are expected to be usable, given the
+    opening hours of their locker site.
+  aggregation: sum
+  unit: hours
+  requires:
+  - locker-bank
+  - locker-site
+- id: bank-outage-hours
+  name: Bank outage hours
+  definition: Hours of bank outages that fall within scheduled bank hours.
+  aggregation: sum
+  unit: hours
+  requires:
+  - bank-outage
+  - locker-bank
+  - locker-site
+- id: available-compartment-hours
+  name: Available compartment hours
+  definition: For every compartment, scheduled hours of its bank minus outage hours of that bank; summed
+    over compartments.
+  aggregation: sum
+  unit: hours
+  requires:
+  - compartment
+  - locker-bank
+  - locker-site
+  - bank-outage
+kpis:
+- id: bank-availability
+  name: Locker bank availability
+  definition: Share of scheduled hours in which locker banks could serve parcels.
+  formula: 1 - bank-outage-hours / scheduled-bank-hours
+  uses:
+  - bank-outage-hours
+  - scheduled-bank-hours
+  unit: ratio
+  direction: higher-is-better
+  target: '>= 0.995'
+  dimensions:
+  - locker-bank
+  - locker-site
+  - site-host
+  timeGrain:
+  - day
+  - week
+  - month
+  status: agreed

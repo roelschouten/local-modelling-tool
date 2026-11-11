@@ -157,6 +157,32 @@ An industry model is a starting point, not an answer. The **Explore · ✎ Desig
 
 Changes are saved in your own browser (`localStorage`), per model, as a delta rather than a copy of the model — so a full day's workshop survives a refresh without filling the browser's storage, and switching industry or flavour leaves each model's changes where they were. `⌘Z` / `⇧⌘Z` undo and redo. **Export the model JSON before you close the tab** if the work matters: nothing is uploaded anywhere, and clearing site data clears the changes.
 
+### Concepts and Processes views (fork addition)
+
+This fork adds two read-only views, **Concepts** and **Processes**, next to Graph · ERD · Domain map. They show conceptual and process models written as YAML (`data-architecture/model/v1`), one folder per domain:
+
+```
+<domain>/
+├── business.yaml    kind: BusinessModel  — concepts (entity | event), relationships, metrics, KPIs
+└── processes.yaml   kind: ProcessModel   — processes and their steps
+```
+
+- **Concepts** groups concepts by domain. Each relationship is labelled with the role of its first end and the cardinality at each end; concepts referenced from domains that are not loaded are dashed. Selecting a KPI highlights every concept it needs; selecting a concept lists its relationships as sentences, the processes that create, produce or change it, and the KPIs that depend on it.
+- **Processes** draws one lane per process: trigger → steps → the events and entities each step produces or creates (optionally also what it changes). Concepts are shared with the Concepts view, so you can jump between the two.
+- Concepts and relationships with open questions are marked; the details panel lists them.
+
+**Edit mode** (the *Explore · ✎ Edit* switch above the outline) turns the right panel into forms for every concept, relationship, metric, KPI, process, step and domain, and adds *+ Concept / + Event / + Relationship / + KPI / + Process / + Domain*. The diagram redraws as soon as a field is applied (Enter, or click outside; Cmd/Ctrl+Enter in multi-line fields), and nodes stay where they are while you edit — use *Re-layout* to tidy up. Renaming an id rewrites every reference to it, also in other loaded domains; `dependsOn` follows the references automatically (only the version range is yours). *Move to another domain* (in the concept form) relocates an entity or event: references everywhere are rewritten, relationships that no longer involve the old domain move with it, and a move that would make two domains depend on each other is flagged before you confirm. A relationship's owning domain can be changed in its form. Undo/redo with the arrows or Cmd/Ctrl+Z. Issues (missing definitions, formulas that do not match their metrics, a step that "produces" something that is not an event, broken version ranges, …) are listed under the form.
+
+**Save** writes a new file per changed model, e.g. `apl-business-v0.2.0.yaml`: it suggests a version bump from what changed (removing anything, tightening a cardinality or changing a formula is major; adding is minor; wording is patch), lets you override it, and adds a changelog entry to business models. The file you loaded is not touched. The comment block at the top of a file is kept; comments elsewhere in the YAML are not.
+
+**Excel** exports all loaded models (including unsaved edits) to one workbook with the tabs *Domains, Concepts, Relationships, Metrics, KPIs* and *Processes* (one row per step). The spreadsheet library is loaded from the SheetJS CDN on first use.
+
+**JSON** downloads a first-cut logical model in this viewer's own `model.json` format, and **Open as logical →** opens it straight in the ERD (Graph and Design work too). The mapping is mechanical: every entity and event becomes a table with a surrogate key `<table>_id`; `classifiedBy` becomes one column per classification, `lifecycle` a `<table>_status` column and `occursAt` an `occurred_at` timestamp; a relationship becomes a foreign key on the side that points to at most one of the other (for 1:1, on the side whose other end is mandatory); many-to-many becomes an associative table in the relationship's domain; a concept that `specializes` another gets a mandatory foreign key to its supertype (table per type); concepts from domains that are not loaded become stub tables. Each table's `reference` and each foreign key's description say which concept or relationship it came from. Other attributes are not in the conceptual model, so add them in Design mode and save the logical model from there — regenerating from the concepts does not merge with those additions. With a domain selected in the filter, only that domain (plus stubs for what it refers to) is exported.
+
+**Opening files.** The top bar's **open .json / .yaml** takes both kinds of model, several files at once: a `model.json` opens in Graph/ERD, YAML files in Concepts/Processes. The *Open…* button in the concept outline does the same. The two are held separately, so opening one does not unload the other, and the view buttons switch between them. **Example** loads a fictional three-domain parcel-locker company. In the Databricks App, every `*.yaml` under `model-viewer/model-viewer-app/concept-models/` (or the folder in `CONCEPT_MODELS_DIR`) is served by `/api/concept-models` and loaded automatically. Loaded YAML stays in the browser (`localStorage`, including unsaved edits); nothing is uploaded.
+
+The views live in [`docs/static/concept-views.js`](./docs/static/concept-views.js); `docs/index.html` only loads that file and switches to it. `tools/sync_viewer.py` mirrors `docs/static/` into the app alongside `index.html`.
+
 ---
 
 ## How models are generated

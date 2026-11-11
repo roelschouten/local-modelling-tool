@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+// Modified in this fork (roelschouten/local-modelling-tool): adds /api/concept-models.
 
 const express = require('express');
 const path = require('path');
@@ -47,6 +48,38 @@ app.get('/api/bundled-models', (req, res) => {
   const models = [];
   if (hasBundledModel()) models.push({ path: '/model.json', label: 'ddx_gtm_small2_v7' });
   res.json({ models });
+});
+
+// Fork addition: YAML domain models for the Concepts / Processes views.
+// Every *.yaml / *.yml under CONCEPT_MODELS_DIR (default ./concept-models) is
+// returned as text; the browser parses them. Read-only, size-capped.
+const conceptDir = path.resolve(process.env.CONCEPT_MODELS_DIR || path.join(__dirname, 'concept-models'));
+const CONCEPT_MAX_BYTES = 5 * 1024 * 1024;
+function listYaml(dir, base, out) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) listYaml(full, base, out);
+    else if (/\.ya?ml$/i.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+app.get('/api/concept-models', (req, res) => {
+  if (!fs.existsSync(conceptDir)) return res.json({ files: [] });
+  try {
+    let total = 0;
+    const files = [];
+    for (const full of listYaml(conceptDir, conceptDir, []).sort()) {
+      const text = fs.readFileSync(full, 'utf8');
+      total += Buffer.byteLength(text);
+      if (total > CONCEPT_MAX_BYTES) break;
+      files.push({ name: path.relative(conceptDir, full).split(path.sep).join('/'), text });
+    }
+    res.set('Cache-Control', 'no-cache');
+    res.json({ files });
+  } catch (e) {
+    res.status(500).json({ error: 'could not read concept models' });
+  }
 });
 
 app.use('/static', express.static(path.join(publicDir, 'static')));

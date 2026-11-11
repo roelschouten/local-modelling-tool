@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Modified in this fork (roelschouten/local-modelling-tool): adds the Concepts and Processes
+     views for YAML domain models. Changes are marked "Fork addition"; the views live in static/concept-views.js. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -12,6 +14,12 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js"></script>
+<!-- Fork addition: conceptual and process views over YAML domain models (static/concept-views.js). -->
+<script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
+<script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+<script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
+<script src="static/concept-views.js"></script>
 <style>
   :root {
   --g-green-line:#369157; --g-green-head:#418359; --g-green-bd:#b6e2c6; --g-green-bg:#effbf3; --g-green-tile:#d8f5e3; --g-green-ink:#307a4b;
@@ -2763,15 +2771,18 @@ async function fetchModelJson(urls,expectedBytes,onProgress){
   throw new Error((lastErr&&lastErr.message)||'all sources failed');
 }
 
+// Fork change: also takes the YAML domain models (business.yaml / processes.yaml),
+// several at once; the App routes each kind to the view that shows it.
 function LoadJsonButton({onFile,label}){
-  return h('label',{className:'loadjson',title:'Open a local model.json file',
+  return h('label',{className:'loadjson',
+      title:'Open a logical model (model.json) for Graph / ERD, or conceptual and process models (.yaml, several at once) for Concepts / Processes',
       style:{margin:0}},
-    label||'load from JSON',
-    h('input',{type:'file',accept:'.json,application/json',style:{display:'none'},
+    label||'open .json / .yaml',
+    h('input',{type:'file',multiple:true,accept:'.json,application/json,.yaml,.yml',style:{display:'none'},
       onChange:e=>{
-        const f=e.target.files&&e.target.files[0];
+        const fs=[...(e.target.files||[])];
         e.target.value='';
-        if(f&&onFile) onFile(f);
+        if(fs.length&&onFile) onFile(fs);
       }})
   );
 }
@@ -2828,12 +2839,15 @@ const VIEW_MODES=[
   {id:'graph',label:'Graph',title:'The domains and their relationships as a graph'},
   {id:'erd',label:'ERD',title:'Entity tables with their columns and crow\u2019s-foot relationships'},
   {id:'board',label:'Domain map',title:'The business domain map \u2014 your own arrangement of the domains'},
+  // Fork addition: YAML conceptual / process views (static/concept-views.js).
+  ...((window.ConceptViews&&window.ConceptViews.MODES)||[]),
 ];
-function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,viewMode,onViewMode,erdCoreOnly,onErdCoreOnly}){
-  const erdMode=viewMode==='erd', boardMode=viewMode==='board';
+function isConceptMode(mode){ return VIEW_MODES.some(m=>m.id===mode&&m.concept); }
+function GraphViewToggles({showDomains,onShowDomains,animate,onAnimate,viewMode,onViewMode,erdCoreOnly,onErdCoreOnly,hasGraph=true}){
+  const erdMode=viewMode==='erd', boardMode=viewMode==='board'||isConceptMode(viewMode);
   return h(React.Fragment,null,
     h('div',{className:'seg',role:'group','aria-label':'View'},
-      VIEW_MODES.map(m=>h('button',{key:m.id,className:viewMode===m.id?'on':'',title:m.title,
+      VIEW_MODES.filter(m=>hasGraph||m.concept).map(m=>h('button',{key:m.id,className:viewMode===m.id?'on':'',title:m.title,
         'aria-pressed':viewMode===m.id,onClick:()=>onViewMode(m.id)},m.label))),
     erdMode&&h('label',{className:'tbtn',title:'Show the most connected entities and their relationships',
         style:{gap:5,cursor:'pointer',fontWeight:650,color:'var(--muted)'}},
@@ -2972,9 +2986,9 @@ function TopBar({manifest,sel,onSelect,onJump,graphData,loadStatus,localModel,on
         onChange:e=>onSelect({version:e.target.value})},
         versions.map(v=>h('option',{key:v,value:v},v.toUpperCase()))
       ),
-      graphData&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,
-                                     viewMode,onViewMode,erdCoreOnly,onErdCoreOnly}),
-      graphData&&h('div',{className:'seg','data-tour':'design',role:'group','aria-label':'Mode'},
+      (graphData||VIEW_MODES.some(m=>m.concept))&&h(GraphViewToggles,{showDomains,onShowDomains,animate,onAnimate,
+                                     viewMode,onViewMode,erdCoreOnly,onErdCoreOnly,hasGraph:!!graphData}),
+      graphData&&!isConceptMode(viewMode)&&h('div',{className:'seg','data-tour':'design',role:'group','aria-label':'Mode'},
         h('button',{className:designMode?'':'on',title:'Read the model as it ships',
           'aria-pressed':!designMode,onClick:()=>onDesignMode(false)},'Explore'),
         h('button',{className:designMode?'on':'',
@@ -3066,7 +3080,7 @@ const TOUR_STEPS=[
   {target:'flavour',place:'bottom',title:'ECM vs MVM',
     body:'ECM is the full enterprise model; MVM is the leaner, production-ready subset. Toggle to compare the two.'},
   {target:'loadjson',place:'bottom',title:'Bring your own model',
-    body:'Have your own model.json? Load it and explore it in this same viewer — nothing leaves your browser.'},
+    body:'Have your own model.json, or YAML domain models? Open them and explore them in this same viewer — nothing leaves your browser.'},
   {target:'theme',place:'bottom',title:'Theme & colours',
     body:'Switch between light and dark, and pick a colour palette that works for your screen or projector.'}
 ];
@@ -5121,6 +5135,7 @@ function App(){
      piece of state, so the two can never both be on. */
   const [viewMode,setViewMode]=useState('graph');
   const erdMode=viewMode==='erd', boardMode=viewMode==='board';
+  const conceptMode=isConceptMode(viewMode);   // fork addition: YAML concept / process views
   const [erdCoreOnly,setErdCoreOnly]=useState(false);
   const [erdZoom,setErdZoom]=useState(1);
   const [animate,setAnimate]=useState(currentAnimate);
@@ -5247,7 +5262,7 @@ function App(){
   },[editState]);
 
   useEffect(()=>{
-    if(!designMode) return;
+    if(!designMode||conceptMode) return;   // fork: the concept views have their own undo
     const onKey=e=>{
       if(!(e.metaKey||e.ctrlKey)||e.key.toLowerCase()!=='z') return;
       const t=document.activeElement;
@@ -5257,7 +5272,7 @@ function App(){
     };
     window.addEventListener('keydown',onKey);
     return ()=>window.removeEventListener('keydown',onKey);
-  },[designMode,undo,redo]);
+  },[designMode,conceptMode,undo,redo]);
 
   /* Overlay entries are filed under the name the INDUSTRY model gave a thing,
      so anything that starts from what it is called now has to look it up. */
@@ -5583,6 +5598,30 @@ function App(){
     reader.readAsText(file);
   },[processModel]);
 
+  // Fork addition: one Open for both kinds of model. YAML goes to the concept
+  // views, model.json to the graph; whichever is not opened stays as it was.
+  const openLogicalModel=useCallback((data,label)=>{
+    loadTokenRef.current++;
+    setLocalModel(true);
+    setSel({industry:null,version:null,flavour:'ecm'});
+    history.replaceState({},'',location.pathname);
+    try{ localStorage.removeItem(SEL_LS_KEY); }catch(_){}
+    setLoadStatus(''); setProgress(null);
+    processModel(JSON.parse(JSON.stringify(data)),label);
+    setViewMode('erd');
+  },[processModel]);
+  const handleOpenFiles=useCallback(files=>{
+    const list=Array.isArray(files)?files:[files];
+    const json=list.filter(f=>/\.json$/i.test(f.name)), yaml=list.filter(f=>/\.ya?ml$/i.test(f.name));
+    if(json.length){ handleLoadJsonFile(json[0]); }
+    if(yaml.length&&window.ConceptViews){
+      window.ConceptViews.openFiles(yaml);
+      setViewMode(v=>isConceptMode(v)?v:'concepts');
+    } else if(json.length){
+      setViewMode(v=>isConceptMode(v)?'graph':v);
+    }
+  },[handleLoadJsonFile]);
+
   /* ── Gallery: URL is the source of truth ──────────────────
      Every selection is a history entry, so Back returns to the previous model
      and a copied link reopens exactly what the sender was looking at. */
@@ -5779,6 +5818,17 @@ function App(){
     setViewMode(mode);
     gcEvent('view-mode-'+mode,'View mode: '+mode);
   },[]);
+  // Fork addition: the graph canvas was hidden (0x0) while a concept view was on,
+  // so re-measure and re-frame it when the reader comes back.
+  const prevViewRef=useRef(viewMode);
+  useEffect(()=>{
+    const cameFromConcept=isConceptMode(prevViewRef.current);
+    prevViewRef.current=viewMode;
+    const cy=cyRef.current;
+    if(viewMode==='graph'&&cameFromConcept&&cy){
+      requestAnimationFrame(()=>{ cy.resize(); cy.fit(60); if(cy.zoom()>1.8) cy.zoom(1.8); cy.center(); });
+    }
+  },[viewMode]);
   // Clicking an entity on the map fills the details panel and nothing else: the
   // map is not a filter of the graph, so navigate() would throw away the view
   // the reader is standing in.
@@ -6302,14 +6352,14 @@ function App(){
         applySel(next);
       },
       onJump:openCmd,
-      onLoadJson:handleLoadJsonFile,
+      onLoadJson:handleOpenFiles,
       showDomains,onShowDomains:setShowDomains,animate,onAnimate:setAnimate,
       viewMode,onViewMode:switchView,erdCoreOnly,onErdCoreOnly:setErdCoreOnly,
       designMode,onDesignMode:v=>{gcEvent('design-mode-'+(v?'on':'off'),'Design mode '+(v?'on':'off'));setDesignMode(v);},
       actions:h(React.Fragment,null,
         // Graph controls do nothing without a graph, so they stay hidden until
         // one is loaded rather than sitting there inert.
-        graphData&&!boardMode&&h(React.Fragment,null,
+        graphData&&!boardMode&&!conceptMode&&h(React.Fragment,null,
           h('button',{className:'tbtn icononly',title:'Zoom out','aria-label':'Zoom out',
             onClick:()=>erdMode?setErdZoom(z=>Math.max(0.5,z*0.8)):cyRef.current&&cyRef.current.zoom(cyRef.current.zoom()*0.8)},
             h(ToolbarIcon,{name:'zoomOut'})),
@@ -6331,7 +6381,7 @@ function App(){
         h(ThemeControls,{theme,onTheme:setTheme,palette,onPalette:setPalette})
       )}),
 
-    designMode&&graphData&&h(DesignBar,{
+    designMode&&graphData&&!conceptMode&&h(DesignBar,{
       changeCounts:changeMap.counts,issues,saved:designSaved,
       canUndo,canRedo,onUndo:undo,onRedo:redo,
       onAddEntity:()=>newEntity(filterState.type==='domain'?filterState.value:null),
@@ -6351,8 +6401,13 @@ function App(){
       h('i',{style:{width:(progress.total?Math.min(100,100*progress.received/progress.total):8)+'%'}})
     ),
 
+    // Fork addition: the YAML concept / process views replace the main body while
+    // they are on. The main body stays mounted (hidden) so the graph keeps its state.
+    conceptMode&&h(window.ConceptViews.View,{mode:viewMode,theme,palette,onViewMode:switchView,
+      onOpenLogical:openLogicalModel,onOpenJson:f=>{ handleLoadJsonFile(f); setViewMode('graph'); }}),
+
     // ── Main body ────────────────────────────────────────
-    h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
+    h('div',{style:{display:conceptMode?'none':'flex',flex:1,overflow:'hidden'}},
 
       // Left sidebar: the model outline on one tab, the saved custom views on
       // the other, and the live tick-box selection pinned to the bottom.
@@ -6481,6 +6536,10 @@ function App(){
             h('div',{style:{fontSize:48,marginBottom:15}},'📊'),
             h('p',{style:{color:'var(--muted)',fontSize:14}},
               gallery?'Pick an industry to open its model':'No model.json is bundled with this app'),
+            !gallery&&h('p',{style:{color:'var(--muted)',fontSize:12.5,maxWidth:420,margin:'6px auto 0'}},
+              'Open a model.json with ',h('b',null,'open .json / .yaml'),' above, or switch to ',
+              h('a',{href:'#',onClick:e=>{e.preventDefault();switchView('concepts');}},'Concepts'),
+              ' to work on YAML domain models and generate a logical model from them.'),
             gallery&&h('button',{className:'btn',style:{marginTop:12},
               onClick:openCmd},'Choose industry')
           )

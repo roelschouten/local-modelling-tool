@@ -1,0 +1,43 @@
+# Lokkr (fictional automated parcel-locker company) - domain: parcel-handling
+# Example model for the viewer's Concepts / Processes views.
+
+apiVersion: data-architecture/model/v1
+kind: ProcessModel
+metadata:
+  domain: parcel-handling
+  name: Parcel handling processes
+  version: 1.0.0
+  status: agreed
+
+processes:
+  - id: locker-delivery
+    name: Locker delivery
+    definition: From a shipper announcing a parcel to the parcel leaving the locker.
+    trigger: A shipper announces a parcel for a locker site.
+    steps:
+      - id: announce-parcel
+        name: Register announced parcel
+        actor: shipper (system)
+        creates: [parcel]
+        next: [reserve-compartment]
+      - id: reserve-compartment
+        name: Reserve compartment
+        actor: Lokkr platform
+        creates: [compartment-reservation]
+        next: [drop-off-parcel]
+      - id: drop-off-parcel
+        name: Place parcel in compartment
+        actor: courier
+        produces: [drop-off]
+        changes: [compartment-reservation, parcel]
+        next: [collect-parcel, retrieve-expired-parcel]
+      - id: collect-parcel
+        name: Collect parcel
+        actor: consumer
+        produces: [collection]
+        changes: [parcel]
+      - id: retrieve-expired-parcel
+        name: Retrieve expired parcel
+        actor: courier
+        produces: [collection]
+        changes: [parcel]

@@ -1,0 +1,96 @@
+# Lokkr (fictional automated parcel-locker company) - domain: customer
+# Example model for the viewer's Concepts / Processes views.
+
+apiVersion: data-architecture/model/v1
+kind: BusinessModel
+metadata:
+  domain: customer
+  name: Customer
+  version: 2.0.0
+  status: agreed
+  owner:
+    team: Commercial
+    dataOwner: Commercial Director
+  description: 'Who Lokkr does business with: businesses that send parcels to lockers and consumers who
+    receive them.'
+  changelog:
+  - version: 2.0.0
+    change: 'BREAKING — split customer into abstract customer with subtypes shipper and consumer; removed
+      customer-type classification.
+
+      '
+  - version: 1.0.0
+    change: Initial model.
+dependsOn:
+  locker-network:
+    version: ^1.0.0
+    uses:
+    - locker-site
+concepts:
+- id: customer
+  kind: entity
+  name: Customer
+  definition: A party that has an account with Lokkr. Always exactly one of shipper or consumer.
+  identifiedBy: Customer number
+  abstract: true
+  status: agreed
+- id: shipper
+  kind: entity
+  name: Shipper
+  definition: A business that has Lokkr deliver parcels to locker sites on its behalf, such as a webshop
+    or a carrier.
+  identifiedBy: Customer number
+  aliases:
+    en:
+    - merchant
+    - sender
+    - B2B customer
+  specializes: customer
+  status: agreed
+- id: consumer
+  kind: entity
+  name: Consumer
+  definition: A private person with a Lokkr app account who receives or returns parcels via lockers.
+  identifiedBy: Customer number
+  aliases:
+    en:
+    - recipient
+    - app user
+  specializes: customer
+  status: agreed
+- id: shipper-contract
+  kind: entity
+  name: Shipper Contract
+  definition: An agreement with a shipper that sets tariffs, service level and the maximum dwell time
+    before a parcel expires.
+  identifiedBy: Contract number
+  lifecycle:
+  - draft
+  - active
+  - terminated
+  status: agreed
+relationships:
+- id: shipper-holds-contract
+  ends:
+  - concept: shipper
+    role: holds
+    cardinality: 1..1
+  - concept: shipper-contract
+    role: is held by
+    cardinality: 0..*
+- id: consumer-favours-site
+  ends:
+  - concept: consumer
+    role: favours
+    cardinality: 0..*
+  - concept: locker-network:locker-site
+    role: is favoured by
+    cardinality: 0..*
+metrics:
+- id: active-consumer-count
+  name: Active consumers
+  definition: Consumers who collected at least one parcel in the last 90 days.
+  aggregation: count-distinct
+  unit: consumers
+  requires:
+  - consumer
